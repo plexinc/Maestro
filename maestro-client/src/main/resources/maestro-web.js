@@ -136,9 +136,10 @@
       }
 
       if (!!node.attributes['flt-semantics-identifier'] || !!node.id || !!node.ariaLabel || !!node.name || !!node.title || !!node.htmlFor || !!node.attributes['data-testid']) {
-        // Prefer flt-semantics-identifier: on Flutter web node.id is an
-        // unstable internal handle, not the developer-set identifier.
-        attributes['resource-id'] = node.attributes['flt-semantics-identifier']?.value || identifier(node, 'id', 'id') || identifier(node, 'ariaLabel', 'aria-label') || identifier(node, 'name', 'name') || identifier(node, 'title', 'title') || identifier(node, 'htmlFor', 'for') || node.attributes['data-testid']?.value
+        // Prefer flt-semantics-identifier then `data-testid` over `id`: on Flutter web
+        // node.id is an unstable internal handle, and canvas UIs (e.g. Lightning) assign a
+        // meaningless numeric `id` while carrying the real identifier in `data-testid`.
+        attributes['resource-id'] = node.attributes['flt-semantics-identifier']?.value || node.attributes['data-testid']?.value || identifier(node, 'id', 'id') || identifier(node, 'ariaLabel', 'aria-label') || identifier(node, 'name', 'name') || identifier(node, 'title', 'title') || identifier(node, 'htmlFor', 'for')
       }
 
       if (node.tagName.toLowerCase() === 'body') {
