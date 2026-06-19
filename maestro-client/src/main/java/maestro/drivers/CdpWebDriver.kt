@@ -327,7 +327,12 @@ class CdpWebDriver(
 
         val children = domRepresentation["children"] as List<Map<String, Any>>
 
-        return TreeNode(attributes = attributes, children = children.map { parseDomAsTreeNodes(it) })
+        return TreeNode(
+            attributes = attributes,
+            // Surface web focus (document.activeElement or data-focused) to the typed field the focused() filter reads.
+            focused = attrs["focused"] as? Boolean,
+            children = children.map { parseDomAsTreeNodes(it) },
+        )
     }
 
     private fun detectWindowChange() {

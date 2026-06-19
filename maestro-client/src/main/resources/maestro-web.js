@@ -142,6 +142,14 @@
         attributes['selected'] = true
       }
 
+      // Expose focus to Maestro's `focused:` selector. Reflects real DOM
+      // focus (document.activeElement) for normal web apps, and the `data-focused`
+      // flag set by canvas DOM-inspector bridges (e.g. Lightning, whose
+      // activeElement is always the <canvas>, never the focused scene node).
+      if (node === document.activeElement || node.attributes['data-focused']?.value === 'true') {
+        attributes['focused'] = true
+      }
+
       if (isSynthetic(node)) {
         attributes['synthetic'] = true
         attributes['ignoreBoundsFiltering'] = true
