@@ -331,7 +331,7 @@ class TestCommand : Callable<Int> {
      * Get the list of device IDs that will be used for test execution
      */
     private fun getDeviceIds(plan: ExecutionPlan): List<String> {
-        val includeWeb = executionPlanIncludesWebFlow(plan)
+        val includeWeb = executionPlanIncludesWebFlow(plan) || (platform ?: parent?.platform) == "web"
         val connectedDevices = DeviceService.listConnectedDevices(
             includeWeb = includeWeb,
             host = parent?.host,
@@ -362,7 +362,7 @@ class TestCommand : Callable<Int> {
         }
 
         val onlySequenceFlows = plan.sequence.flows.isNotEmpty() && plan.flowsToRun.isEmpty() // An edge case
-        val includeWeb = executionPlanIncludesWebFlow(plan);
+        val includeWeb = executionPlanIncludesWebFlow(plan) || (platform ?: parent?.platform) == "web";
 
         if (includeWeb) {
           PrintUtils.warn("Web support is in Beta. We would appreciate your feedback!\n")
