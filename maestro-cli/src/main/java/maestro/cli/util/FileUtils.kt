@@ -34,7 +34,13 @@ object FileUtils {
         }
 
         val config = YamlCommandReader.readConfig(toPath())
-        return config.url != null
+        if (config.url != null) return true
+
+        // Fall back to treating a URL-shaped appId as a web target, so flows can
+        // point the web driver at a URL via appId without a separate url field.
+        val appId = config.appId
+        return appId.startsWith("http://", ignoreCase = true) ||
+            appId.startsWith("https://", ignoreCase = true)
     }
 
     /** Returns this path relative to [WorkingDirectory.baseDir] when possible, otherwise the absolute path string. */
