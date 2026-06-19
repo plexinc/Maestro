@@ -19,3 +19,5 @@ local/
 
 # Ignore iOS intermediate build directory
 /driver-iPhoneSimulator/
+# Maestro iOS relative DerivedData
+maestro-ios-xctest-runner/DerivedData/
