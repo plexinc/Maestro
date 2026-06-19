@@ -405,6 +405,12 @@ class WebDriver(
         return when (code) {
             KeyCode.ENTER -> Keys.ENTER
             KeyCode.BACKSPACE -> Keys.BACK_SPACE
+            KeyCode.REMOTE_UP -> Keys.ARROW_UP
+            KeyCode.REMOTE_DOWN -> Keys.ARROW_DOWN
+            KeyCode.REMOTE_LEFT -> Keys.ARROW_LEFT
+            KeyCode.REMOTE_RIGHT -> Keys.ARROW_RIGHT
+            KeyCode.REMOTE_CENTER -> Keys.ENTER
+            KeyCode.REMOTE_MENU -> Keys.ESCAPE
             else -> error("Keycode $code is not supported on web")
         }
     }
