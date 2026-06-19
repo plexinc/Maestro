@@ -127,7 +127,11 @@
 
       if (!!node.id || !!node.ariaLabel || !!node.name || !!node.title || !!node.htmlFor || !!node.attributes['data-testid']) {
         const title = typeof node.title === 'string' ? node.title : null
-        attributes['resource-id'] = node.id || node.ariaLabel || node.name || title || node.htmlFor || node.attributes['data-testid']?.value
+        // Prefer `data-testid` over `id` for resource-id so `id:` selectors
+        // target the conventional test hook. Required for canvas UIs (e.g.
+        // Lightning) whose DOM-inspector mirror assigns a meaningless numeric
+        // `id` per node while carrying the real identifier in `data-testid`.
+        attributes['resource-id'] = node.attributes['data-testid']?.value || node.id || node.ariaLabel || node.name || title || node.htmlFor
       }
 
       if (node.tagName.toLowerCase() === 'body') {
