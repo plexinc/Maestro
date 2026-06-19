@@ -2,7 +2,7 @@
 #
 #   name       MAESTRO_APP value, and the name used for debug-output directories
 #   path       flow directory, relative to e2e/
-#   platforms  where it runs: android, ios or web, or several joined by commas with no
+#   platforms  where it runs: android, ios, web or tvos, or several joined by commas with no
 #              spaces, e.g. android,ios
 #   failing    yes when it carries `failing`-tagged flows, which are expected to fail
 #              and so are run with inverted polarity
@@ -25,3 +25,7 @@ wikipedia          workspaces/wikipedia        ios        no
 # Browser flows: the only workspace with no app behind it, so there is nothing to install
 # and nothing that could fail on a device.
 web                workspaces/web              web        no
+
+# Apple TV: need a tvOS simulator, so they run only on tvos.
+tvos_settings      workspaces/tvos_settings    tvos       no
+tvos_demo_app      workspaces/tvos_demo_app    tvos       no

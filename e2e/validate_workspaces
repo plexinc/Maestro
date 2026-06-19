@@ -32,8 +32,8 @@ awk '
 		}
 		count = split($3, platforms, ",")
 		for (i = 1; i <= count; i++) {
-			if (platforms[i] != "android" && platforms[i] != "ios" && platforms[i] != "web") {
-				printf "%s:%d: unknown platform \"%s\" in \"%s\" (want android, ios or web, comma-separated)\n", FILENAME, FNR, platforms[i], $3
+			if (platforms[i] != "android" && platforms[i] != "ios" && platforms[i] != "web" && platforms[i] != "tvos") {
+				printf "%s:%d: unknown platform \"%s\" in \"%s\" (want android, ios, web or tvos, comma-separated)\n", FILENAME, FNR, platforms[i], $3
 				bad = 1
 			}
 		}
