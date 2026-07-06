@@ -4,6 +4,7 @@
 
 ## 2.6.1
 
+- Restore the bundled Maestro Studio: `maestro studio` launches the local web Studio again instead of only printing a desktop-app download link
 - iOS: fix cross-process sheets and improve hierarchy walk performance
 - Fix stale iframe handling in `fetchCrossOriginIframeContent`
 - Update some CLI hints to display app.maestro.dev, not a legacy URL
