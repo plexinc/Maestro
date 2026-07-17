@@ -24,6 +24,15 @@ object DeviceCreateUtil {
             deviceType = Device.DeviceType.BROWSER,
             deviceSpec = deviceSpec,
         )
+        // v1 doesn't create/boot a VVD; it must already be running. Surface the
+        // running device as-is so `-p vega` resolves without a create step.
+        is DeviceSpec.Vega    -> Device.AvailableForLaunch(
+            platform = Platform.VEGA,
+            description = "Vega ${deviceSpec.model}",
+            modelId = deviceSpec.model,
+            deviceType = Device.DeviceType.EMULATOR,
+            deviceSpec = deviceSpec,
+        )
     }
 
     fun getOrCreateAppleDevice(

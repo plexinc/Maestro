@@ -16,6 +16,8 @@ import maestro.device.Platform
 import maestro.drivers.AndroidDriver
 import maestro.drivers.CdpWebDriver
 import maestro.drivers.IOSDriver
+import maestro.drivers.VegaDriver
+import maestro.vega.VegaDeviceConnection
 import maestro.utils.CliInsights
 import maestro.utils.TempFileHandler
 import util.IOSDeviceType
@@ -73,8 +75,19 @@ internal class McpMaestroSessionManager : AutoCloseable {
         return when (device.platform) {
             Platform.ANDROID -> createAndroidSession(device, streamDeviceType)
             Platform.IOS, Platform.TVOS -> createIosSession(device, streamDeviceType)
+            Platform.VEGA -> createVegaSession(device, streamDeviceType)
             Platform.WEB -> createWebSession()
         }
+    }
+
+    private fun createVegaSession(device: Device.Connected, streamDeviceType: StreamDeviceType?): McpMaestroSession {
+        val driver = McpViewerDriver(VegaDriver(VegaDeviceConnection(device.instanceId)), "vega")
+        return McpMaestroSession(
+            maestro = Maestro.vega(driver),
+            platform = "vega",
+            streamDeviceType = streamDeviceType,
+            deviceId = device.instanceId,
+        )
     }
 
     private fun createAndroidSession(device: Device.Connected, streamDeviceType: StreamDeviceType): McpMaestroSession {

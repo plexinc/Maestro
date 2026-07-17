@@ -35,6 +35,7 @@ sealed interface DeviceLocale {
       return when (platform) {
         Platform.ANDROID -> AndroidLocale.fromString(localeString)
         Platform.IOS, Platform.TVOS -> IosLocale.fromString(localeString)
+        Platform.VEGA -> VegaLocale.fromString(localeString)
         Platform.WEB -> WebLocale.fromString(localeString)
       }
     }
@@ -58,6 +59,7 @@ sealed interface DeviceLocale {
       return when (platform) {
         Platform.ANDROID -> AndroidLocale.all
         Platform.IOS, Platform.TVOS -> IosLocale.entries
+        Platform.VEGA -> VegaLocale.entries
         Platform.WEB -> WebLocale.entries
       }
     }
@@ -69,6 +71,7 @@ sealed interface DeviceLocale {
       return when (platform) {
         Platform.ANDROID -> AndroidLocale.allCodes
         Platform.IOS, Platform.TVOS -> IosLocale.allCodes
+        Platform.VEGA -> VegaLocale.allCodes
         Platform.WEB -> WebLocale.allCodes
       }
     }
@@ -81,6 +84,7 @@ sealed interface DeviceLocale {
       return when (platform) {
         Platform.ANDROID -> AndroidLocale.find(languageCode, countryCode)
         Platform.IOS, Platform.TVOS -> IosLocale.find(languageCode, countryCode)
+        Platform.VEGA -> VegaLocale.find(languageCode, countryCode)
         Platform.WEB -> WebLocale.find(languageCode, countryCode)
       }
     }
@@ -90,6 +94,7 @@ sealed interface DeviceLocale {
       return when(platform) {
         Platform.ANDROID -> AndroidLocale.fromString("en_US")
         Platform.IOS, Platform.TVOS -> IosLocale.fromString("en_US")
+        Platform.VEGA -> VegaLocale.fromString("en_US")
         Platform.WEB -> WebLocale.fromString("en_US")
       }
     }

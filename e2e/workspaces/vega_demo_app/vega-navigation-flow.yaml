@@ -1,0 +1,61 @@
+# Mirrors e2e/workspaces/tvos_demo_app/tvos-navigation-flow.yaml, adapted for Vega:
+# focus is asserted by testID (Vega surfaces `focused` on the focusable button, not its
+# child text) and the on-screen Back button stands in for the Apple TV menu key.
+appId: dev.mobile.maestro.vega.demo.main
+tags:
+  - vega
+  - passing
+---
+- launchApp
+
+# Home loads with the first menu item focused.
+- assertVisible: "Home"
+- assertVisible:
+    id: "menu-navigation"
+    focused: true
+
+# Navigate down through the menu.
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "menu-text-input"
+    focused: true
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "menu-focus"
+    focused: true
+
+# Navigate back up.
+- pressKey: "Remote Dpad Up"
+- pressKey: "Remote Dpad Up"
+- assertVisible:
+    id: "menu-navigation"
+    focused: true
+
+# Enter the Navigation Test screen.
+- pressKey: "Remote Dpad Center"
+- assertVisible: "Navigation Test"
+- assertVisible:
+    id: "grid-top-left"
+    focused: true
+
+# Move around the 2x2 grid with the D-pad.
+- pressKey: "Remote Dpad Right"
+- assertVisible:
+    id: "grid-top-right"
+    focused: true
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "grid-bottom-right"
+    focused: true
+- pressKey: "Remote Dpad Left"
+- assertVisible:
+    id: "grid-bottom-left"
+    focused: true
+
+# Focus the Back button and return Home.
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "back-button"
+    focused: true
+- pressKey: "Remote Dpad Center"
+- assertVisible: "Home"

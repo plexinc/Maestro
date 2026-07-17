@@ -1,0 +1,35 @@
+# Mirrors e2e/workspaces/tvos_demo_app/tvos-focus-flow.yaml, adapted for Vega.
+# Verifies that programmatic focus (requestTVFocus + hasTVPreferredFocus) lands on
+# Button 2, not the first button.
+appId: dev.mobile.maestro.vega.demo.main
+tags:
+  - vega
+  - passing
+---
+- launchApp
+
+# Open the Focus Test screen.
+- assertVisible: "Home"
+- pressKey: "Remote Dpad Down"
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "menu-focus"
+    focused: true
+- pressKey: "Remote Dpad Center"
+- assertVisible: "Focus Test"
+
+# Programmatic focus should have landed on Button 2.
+- assertVisible:
+    id: "focus-button-2"
+    focused: true
+- assertVisible:
+    id: "focus-button-1"
+    focused: false
+
+# Return Home via the Back button.
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "back-button"
+    focused: true
+- pressKey: "Remote Dpad Center"
+- assertVisible: "Home"
