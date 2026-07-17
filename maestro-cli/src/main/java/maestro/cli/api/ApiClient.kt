@@ -968,27 +968,38 @@ data class CliVersion(
     val major: Int,
     val minor: Int,
     val patch: Int,
+    // Plex fork: a fork-owned build segment appended to Maestro's major.minor.patch.
+    // 0 means a pristine upstream version; we bump it for fork-only fixes without
+    // touching the upstream-tracked major.minor.patch. Defaults to 0 so 3-part
+    // values parse unchanged.
+    val build: Int = 0,
 ) : Comparable<CliVersion> {
 
     override fun compareTo(other: CliVersion): Int {
         return COMPARATOR.compare(this, other)
     }
 
+    /** Maestro's major.minor.patch, without the fork build segment. */
+    val baseVersion: String
+        get() = "$major.$minor.$patch"
+
     override fun toString(): String {
-        return "$major.$minor.$patch"
+        return "$major.$minor.$patch.$build"
     }
 
     companion object {
 
-        private val COMPARATOR = compareBy<CliVersion>({ it.major }, { it.minor }, { it.patch })
+        private val COMPARATOR =
+            compareBy<CliVersion>({ it.major }, { it.minor }, { it.patch }, { it.build })
 
         fun parse(versionString: String): CliVersion? {
             val parts = versionString.split('.')
-            if (parts.size != 3) return null
+            if (parts.size != 3 && parts.size != 4) return null
             val major = parts[0].toIntOrNull() ?: return null
             val minor = parts[1].toIntOrNull() ?: return null
             val patch = parts[2].toIntOrNull() ?: return null
-            return CliVersion(major, minor, patch)
+            val build = if (parts.size == 4) (parts[3].toIntOrNull() ?: return null) else 0
+            return CliVersion(major, minor, patch, build)
         }
     }
 }

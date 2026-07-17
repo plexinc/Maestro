@@ -24,6 +24,11 @@ group = "dev.mobile"
 
 val CLI_VERSION: String by project
 
+// Plex fork: the published CLI version is Maestro's major.minor.patch (CLI_VERSION)
+// with a fork-owned build segment appended (PLEX_BUILD), giving major.minor.patch.build.
+val PLEX_BUILD: String = (project.findProperty("PLEX_BUILD") as String?) ?: "0"
+val FULL_CLI_VERSION: String = "$CLI_VERSION.$PLEX_BUILD"
+
 application {
     applicationName = "maestro"
     mainClass.set("maestro.cli.AppKt")
@@ -355,7 +360,7 @@ tasks.create("createProperties") {
     doLast {
         File("$buildDir/resources/main/version.properties").writer().use { w ->
             val p = Properties()
-            p["version"] = CLI_VERSION
+            p["version"] = FULL_CLI_VERSION
             p.store(w, null)
         }
     }
@@ -396,7 +401,7 @@ mavenPublishing {
 }
 
 jreleaser {
-    version = CLI_VERSION
+    version = FULL_CLI_VERSION
     gitRootSearch.set(true)
 
     project {
@@ -425,21 +430,31 @@ jreleaser {
 
             release {
                 github {
-                    repoOwner.set("mobile-dev-inc")
-                    name.set("maestro")
-                    tagName.set("cli-$CLI_VERSION")
-                    releaseName.set("CLI $CLI_VERSION")
+                    // Plex fork: releases land on plexinc/Maestro, not upstream mobile-dev-inc/maestro.
+                    repoOwner.set("plexinc")
+                    name.set("Maestro")
+                    tagName.set("cli-$FULL_CLI_VERSION")
+                    releaseName.set("CLI $FULL_CLI_VERSION")
                     overwrite.set(true)
 
+                    // Plex fork: we don't use GitHub milestones. JReleaser closes the
+                    // matching milestone after releasing, which calls the issues API and
+                    // fails with 403 under the default workflow token (contents:write only).
+                    milestone {
+                        close.set(false)
+                    }
+
                     changelog {
-                        // GitHub removes dots Markdown headers (1.37.5 becomes 1375)
+                        // GitHub removes dots Markdown headers (1.37.5 becomes 1375).
+                        // CHANGELOG headers track Maestro's major.minor.patch, so the
+                        // anchor uses CLI_VERSION (not the fork build segment).
                         extraProperties.put("versionHeader", CLI_VERSION.replace(".", ""))
 
                         formatted.set(ALWAYS)
                         content.set("""
                             [See changelog in the CHANGELOG.md file][link]
 
-                            [link]: https://github.com/mobile-dev-inc/maestro/blob/main/CHANGELOG.md#{{changelogVersionHeader}}
+                            [link]: https://github.com/plexinc/Maestro/blob/main/CHANGELOG.md#{{changelogVersionHeader}}
                         """.trimIndent()
                         )
                     }
@@ -450,7 +465,9 @@ jreleaser {
 
     packagers {
         brew {
-            setActive("RELEASE")
+            // Plex fork has no Homebrew tap — disable brew publishing so
+            // jreleaserFullRelease doesn't fail trying to push a formula.
+            setActive("NEVER")
             extraProperties.put("skipJava", "true")
             formulaName.set("Maestro")
 
