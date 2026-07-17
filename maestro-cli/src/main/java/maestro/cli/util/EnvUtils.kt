@@ -16,6 +16,10 @@ import java.util.concurrent.TimeoutException
 object EnvUtils {
     private const val PROD_API_URL = "https://api.copilot.mobile.dev"
 
+    // Plex fork: the CLI update check and changelog fetch resolve directly from the
+    // plexinc/Maestro GitHub repo (releases + raw content), not upstream Maestro's API.
+    private const val PROD_GITHUB_REPO = "plexinc/Maestro"
+
     val OS_NAME: String = System.getProperty("os.name")
     val OS_ARCH: String = System.getProperty("os.arch")
     val OS_VERSION: String = System.getProperty("os.version")
@@ -32,6 +36,11 @@ object EnvUtils {
 
     val BASE_API_URL: String
         get() = System.getenv("MAESTRO_API_URL") ?: PROD_API_URL
+
+    // plexinc/Maestro repo slug backing the update check and changelog fetch.
+    // Overridable via PLEX_MAESTRO_REPO for local testing.
+    val GITHUB_REPO: String
+        get() = System.getenv("PLEX_MAESTRO_REPO") ?: PROD_GITHUB_REPO
 
     fun xdgStateHome(): Path {
         if (System.getenv("XDG_STATE_HOME") != null) {

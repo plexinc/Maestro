@@ -1,5 +1,6 @@
 package maestro.cli.util
 
+import maestro.cli.util.EnvUtils
 import maestro.cli.util.EnvUtils.CLI_VERSION
 import maestro.utils.HttpClient
 import okhttp3.Request
@@ -19,7 +20,7 @@ object ChangeLogUtils {
 
     fun fetchContent(): String? {
         val request = Request.Builder()
-            .url("https://raw.githubusercontent.com/mobile-dev-inc/maestro/main/CHANGELOG.md")
+            .url("https://raw.githubusercontent.com/${EnvUtils.GITHUB_REPO}/main/CHANGELOG.md")
             .build()
         return HttpClient.build("ChangeLogUtils").newCall(request).execute().body?.string()
     }
@@ -33,9 +34,9 @@ fun main() {
     val changelogFile = File(System.getProperty("user.dir"), "CHANGELOG.md")
     val content = changelogFile.readText()
     val unreleased = ChangeLogUtils.formatBody(content, "Unreleased")
-    val current = ChangeLogUtils.formatBody(content, CLI_VERSION.toString())
+    val current = ChangeLogUtils.formatBody(content, CLI_VERSION?.baseVersion.orEmpty())
     val changelog = unreleased ?: current
-    println("## ${unreleased?.let { "Unreleased" } ?: CLI_VERSION.toString()}")
+    println("## ${unreleased?.let { "Unreleased" } ?: CLI_VERSION?.baseVersion}")
     println("-".repeat(100))
     println(ChangeLogUtils.print(changelog))
     println("-".repeat(100))
