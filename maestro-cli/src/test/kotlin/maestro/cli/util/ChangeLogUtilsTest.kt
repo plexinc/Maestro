@@ -14,7 +14,9 @@ class ChangeLogUtilsTest {
     fun `test format last version`() {
         val content = changelogFile.readText()
 
-        val changelog = ChangeLogUtils.formatBody(content, CLI_VERSION.toString())
+        // CHANGELOG sections are keyed on Maestro's major.minor.patch, not the
+        // full major.minor.patch.build, so match on the base version.
+        val changelog = ChangeLogUtils.formatBody(content, CLI_VERSION?.baseVersion.orEmpty())
 
         assertThat(changelog).isNotNull()
         assertThat(changelog).isNotEmpty()
