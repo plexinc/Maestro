@@ -1,4 +1,4 @@
-import React, { MouseEventHandler, useState } from "react";
+import React, { MouseEventHandler, useEffect, useState } from "react";
 import { DivProps } from "../../helpers/models";
 import { AnnotatedScreenshot } from "./AnnotatedScreenshot";
 import { isHotkeyPressed } from "react-hotkeys-hook";
@@ -15,13 +15,53 @@ export default function InteractableDevice({
 }: {
   enableGestureControl?: boolean;
 }) {
-  const { deviceScreen } = useDeviceContext();
+  const { deviceScreen, tvMode, inspectedElement } = useDeviceContext();
   const { runCommandYaml } = useRepl();
   const metaKeyDown = useMetaKeyDown();
 
+  /**
+   * In TV mode, map physical arrow keys to the D-pad, Enter to Center, and Esc to
+   * the back button, so the device can be driven straight from the keyboard.
+   * Skipped while typing in a field or while the action modal is open (it owns
+   * arrow keys then).
+   */
+  useEffect(() => {
+    if (!tvMode) return;
+
+    const KEY_TO_DPAD: Record<string, string> = {
+      ArrowUp: "Remote Dpad Up",
+      ArrowDown: "Remote Dpad Down",
+      ArrowLeft: "Remote Dpad Left",
+      ArrowRight: "Remote Dpad Right",
+      Enter: "Remote Dpad Center",
+      Escape: "Remote Menu",
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (inspectedElement) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) {
+        return;
+      }
+      const key = KEY_TO_DPAD[e.key];
+      if (!key) return;
+      e.preventDefault();
+      runCommandYaml(`- pressKey: "${key}"`);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [tvMode, inspectedElement, runCommandYaml]);
+
   const onTapGesture = async (x: number, y: number) => {
-    await runCommandYaml(`- tapOn:
+    if (tvMode) {
+      await runCommandYaml('- pressKey: "Remote Dpad Center"');
+    } else {
+      await runCommandYaml(`- tapOn:
     point: "${Math.round(100 * x)}%,${Math.round(100 * y)}%"`);
+    }
   };
 
   const onSwipeGesture = async (
@@ -31,16 +71,30 @@ export default function InteractableDevice({
     endY: number,
     duration: number
   ) => {
-    const startXPercent = Math.round(startX * 100);
-    const startYPercent = Math.round(startY * 100);
-    const endXPercent = Math.round(endX * 100);
-    const endYPercent = Math.round(endY * 100);
-    await runCommandYaml(`
+    if (tvMode) {
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      const key =
+        Math.abs(deltaY) > Math.abs(deltaX)
+          ? deltaY < 0
+            ? "Remote Dpad Up"
+            : "Remote Dpad Down"
+          : deltaX > 0
+            ? "Remote Dpad Right"
+            : "Remote Dpad Left";
+      await runCommandYaml(`- pressKey: "${key}"`);
+    } else {
+      const startXPercent = Math.round(startX * 100);
+      const startYPercent = Math.round(startY * 100);
+      const endXPercent = Math.round(endX * 100);
+      const endYPercent = Math.round(endY * 100);
+      await runCommandYaml(`
       swipe:
         start: "${startXPercent}%,${startYPercent}%"
         end: "${endXPercent}%,${endYPercent}%"
         duration: ${Math.round(duration)}
     `);
+    }
   };
 
   return (

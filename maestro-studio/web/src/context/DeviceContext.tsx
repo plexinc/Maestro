@@ -21,6 +21,8 @@ interface DeviceContextType {
   setFooterHint: (id: string | null) => void;
   currentCommandValue: string;
   setCurrentCommandValue: (id: string) => void;
+  tvMode: boolean;
+  setTvMode: (value: boolean) => void;
 }
 
 const DeviceContext = createContext<DeviceContextType | undefined>(undefined);
@@ -46,6 +48,9 @@ export const DeviceProvider: React.FC<DeviceProviderProps> = ({
   );
   const [footerHint, setFooterHint] = useState<string | null>(null);
   const [currentCommandValue, setCurrentCommandValue] = useState<string>("");
+  // "TV mode" drives D-pad navigation (see InteractableDevice/commandExample).
+  const [tvMode, setTvMode] = useState(false);
+  const prevPlatformRef = useRef<string | undefined>();
 
   /**
    * Update device only when it is changed.
@@ -79,6 +84,19 @@ export const DeviceProvider: React.FC<DeviceProviderProps> = ({
     }
   }, [deviceScreenState, error, isLoading]);
 
+  /**
+   * Default "TV mode" (D-pad navigation) from the device platform: on for tvOS,
+   * off otherwise. Re-derived only when the platform changes, so a manual toggle
+   * survives screen refreshes. Web/canvas TV apps can enable it by hand.
+   */
+  useEffect(() => {
+    const platform = deviceScreenState?.platform?.toUpperCase();
+    if (platform && platform !== prevPlatformRef.current) {
+      prevPlatformRef.current = platform;
+      setTvMode(platform === "TVOS");
+    }
+  }, [deviceScreenState?.platform]);
+
   return (
     <DeviceContext.Provider
       value={{
@@ -92,6 +110,8 @@ export const DeviceProvider: React.FC<DeviceProviderProps> = ({
         deviceScreen: deviceScreenState,
         currentCommandValue,
         setCurrentCommandValue,
+        tvMode,
+        setTvMode,
       }}
     >
       {children}

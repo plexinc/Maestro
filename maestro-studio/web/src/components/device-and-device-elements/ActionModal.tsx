@@ -49,7 +49,7 @@ export default function ActionModal({
   onRun,
 }: ActionModalProps) {
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-  const { deviceScreen, inspectedElement, setInspectedElement } =
+  const { deviceScreen, inspectedElement, setInspectedElement, tvMode } =
     useDeviceContext();
   const inputElementRef = useRef<HTMLInputElement>(null);
   const prevCommandListRef = useRef<Record<string, CommandExample[]>>();
@@ -68,11 +68,12 @@ export default function ActionModal({
   const { unfilteredExamples, fuse } = useMemo(() => {
     const unfilteredExamples = getCommandExamples(
       deviceScreen,
-      inspectedElement
+      inspectedElement,
+      tvMode
     ).filter((item: CommandExample) => item.status === "available");
     const fuse = new Fuse(unfilteredExamples, { keys: ["title", "content"] });
     return { unfilteredExamples, fuse };
-  }, [deviceScreen, inspectedElement]);
+  }, [deviceScreen, inspectedElement, tvMode]);
 
   /**
    * Filtering and getting the new command lists
