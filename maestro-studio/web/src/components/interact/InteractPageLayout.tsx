@@ -21,6 +21,8 @@ const InteractPageLayout = () => {
     footerHint,
     setInspectedElement,
     setCurrentCommandValue,
+    tvMode,
+    setTvMode,
   } = useDeviceContext();
   const { runCommandYaml } = useRepl();
 
@@ -99,8 +101,18 @@ const InteractPageLayout = () => {
           <InteractableDevice />
         </DeviceWrapperAspectRatio>
         <p className="text-xs text-center">
-          Hold CMD (⌘) down to freely tap and swipe on the device screen
+          {tvMode
+            ? "Arrow keys navigate the D-pad, Enter selects, Esc goes back. Hold CMD (⌘) to use D-pad gestures (tap = select, swipe = navigate)"
+            : "Hold CMD (⌘) down to freely tap and swipe on the device screen"}
         </p>
+        <label className="flex items-center justify-center gap-2 text-xs text-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={tvMode}
+            onChange={(e) => setTvMode(e.target.checked)}
+          />
+          TV mode (D-pad navigation) — for tvOS and canvas-based TV web apps
+        </label>
         {footerHint && (
           <div className="absolute bottom-0 left-0 right-0 text-xs text-center bg-slate-100 dark:bg-slate-800 dark:text-white h-auto text-slate-800 overflow-hidden">
             {footerHint}
