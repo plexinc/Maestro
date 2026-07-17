@@ -191,15 +191,17 @@ fun main(args: Array<String>) {
             Updates.fetchChangelogAsync()
             System.err.println()
             val changelog = Updates.getChangelog()
-            val anchor = newVersion.toString().replace(".", "")
+            // CHANGELOG headers track Maestro's major.minor.patch, so anchor on the
+            // base version, not the fork build segment.
+            val anchor = newVersion.baseVersion.replace(".", "")
             System.err.println(
                 listOf(
                     "A new version of the Maestro CLI is available ($newVersion).\n",
                     "See what's new:",
-                    "https://github.com/mobile-dev-inc/maestro/blob/main/CHANGELOG.md#$anchor",
+                    "https://github.com/plexinc/Maestro/blob/main/CHANGELOG.md#$anchor",
                     ChangeLogUtils.print(changelog),
                     "Upgrade command:",
-                    "curl -Ls \"https://get.maestro.mobile.dev\" | bash",
+                    "curl -fsSL \"https://raw.githubusercontent.com/plexinc/Maestro/main/scripts/install.sh\" | bash",
                 ).joinToString("\n").box()
             )
         }
