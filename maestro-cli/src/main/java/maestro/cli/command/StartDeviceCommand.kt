@@ -122,6 +122,13 @@ class StartDeviceCommand : Callable<Int> {
                     locale = deviceLocale?.let { IosLocale.fromString(it) } ?: default.locale,
                 )
             }
+            Platform.VEGA -> {
+                val default = DeviceSpec.Vega.DEFAULT
+                DeviceSpec.Vega(
+                    model = deviceModel ?: default.model,
+                    os = deviceOs ?: default.os,
+                )
+            }
             Platform.WEB -> {
                 val default = DeviceSpec.Web.DEFAULT
                 DeviceSpec.Web(

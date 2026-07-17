@@ -1,0 +1,29 @@
+# Mirrors e2e/workspaces/tvos_demo_app/tvos-text-input-flow.yaml, adapted for Vega.
+# The text field has preferred focus on mount, so no keyboard-open step is needed.
+# Spaces and capitals require the app to declare the input-method service dependency
+# in manifest.toml ([[wants.service]] com.amazon.inputmethod.service); without it the
+# on-screen keyboard connection is rejected and text entry breaks.
+appId: dev.mobile.maestro.vega.demo.main
+tags:
+  - vega
+  - passing
+---
+- launchApp
+
+# Open the Text Input Test screen.
+- assertVisible: "Home"
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "menu-text-input"
+    focused: true
+- pressKey: "Remote Dpad Center"
+- assertVisible: "Text Input Test"
+
+# Type into the focused field and verify the label echoes it (spaces + capitals).
+- inputText: "Hello Vega"
+- assertVisible: "Typed: Hello Vega"
+
+# Erase and retype.
+- eraseText
+- inputText: "Maestro Test"
+- assertVisible: "Typed: Maestro Test"

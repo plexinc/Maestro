@@ -31,6 +31,7 @@ object PickDeviceInteractor {
                     when (result.deviceSpec.platform) {
                         Platform.ANDROID -> PrintUtils.message("Launching Android emulator...")
                         Platform.IOS, Platform.TVOS -> PrintUtils.message("Launching ${result.platform.description} simulator...")
+                        Platform.VEGA -> PrintUtils.message("Using Vega device ${result.description}")
                         Platform.WEB -> PrintUtils.message("Launching ${result.description}")
                     }
 
