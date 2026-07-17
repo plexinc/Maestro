@@ -36,6 +36,8 @@ import maestro.cli.report.TestDebugReporter
 import maestro.cli.util.ScreenReporter
 import maestro.drivers.AndroidDriver
 import maestro.drivers.IOSDriver
+import maestro.drivers.VegaDriver
+import maestro.vega.VegaDeviceConnection
 import maestro.orchestra.WorkspaceConfig.PlatformConfiguration
 import maestro.orchestra.workspace.WorkspaceExecutionPlanner
 import maestro.utils.TempFileHandler
@@ -224,6 +226,8 @@ object MaestroSessionManager {
                         platformConfiguration = platformConfiguration
                     )
 
+                    Platform.VEGA -> createVega(selectedDevice.device.instanceId)
+
                     Platform.WEB -> pickWebDevice(isStudio, isHeadless, screenSize)
                 },
                 device = selectedDevice.device,
@@ -255,6 +259,11 @@ object MaestroSessionManager {
             selectedDevice.platform == Platform.WEB -> MaestroSession(
                 maestro = pickWebDevice(isStudio, isHeadless, screenSize),
                 device = null
+            )
+
+            selectedDevice.platform == Platform.VEGA -> MaestroSession(
+                maestro = createVega(selectedDevice.deviceId ?: error("No Vega device selected")),
+                device = null,
             )
 
             else -> error("Unable to create Maestro session")
@@ -456,6 +465,11 @@ object MaestroSessionManager {
 
     private fun pickWebDevice(isStudio: Boolean, isHeadless: Boolean, screenSize: String?): Maestro {
         return Maestro.web(isStudio, isHeadless, screenSize)
+    }
+
+    private fun createVega(serial: String): Maestro {
+        val connection = VegaDeviceConnection(serial)
+        return Maestro.vega(driver = VegaDriver(connection))
     }
 
     private data class SelectedDevice(

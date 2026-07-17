@@ -1,0 +1,20 @@
+schema-version = 1
+
+[package]
+title = "Maestro Vega Demo"
+version = "0.1.0"
+id = "dev.mobile.maestro.vega.demo"
+
+[components]
+[[components.interactive]]
+id = "dev.mobile.maestro.vega.demo.main"
+runtime-module = "/com.amazon.kepler.keplerscript.runtime.loader_2@IKeplerScript_2_0"
+launch-type = "singleton"
+categories = ["com.amazon.category.main"]
+
+# Required so the app may connect to the on-screen keyboard service. Without it the
+# framework rejects the IME connection ("missing permission") and TextInput falls back
+# to a raw key path that mis-handles space (inserts "Space"), punctuation and Shift.
+[wants]
+[[wants.service]]
+id = "com.amazon.inputmethod.service"

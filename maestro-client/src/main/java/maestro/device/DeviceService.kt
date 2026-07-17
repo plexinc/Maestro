@@ -8,6 +8,7 @@ import maestro.device.locale.IosLocale
 import maestro.device.util.PrintUtils
 import maestro.drivers.AndroidDriver
 import maestro.drivers.CdpWebDriver
+import maestro.vega.VegaCli
 import maestro.utils.MaestroTimer
 import maestro.utils.TempFileHandler
 import okio.buffer
@@ -137,6 +138,18 @@ object DeviceService {
                     deviceSpec = device.deviceSpec,
                 )
             }
+
+            Platform.VEGA -> {
+                // v1 does not boot the VVD for you; it must already be running
+                // (`vega virtual-device start`). Treat the selected device as connected.
+                return Device.Connected(
+                    instanceId = device.modelId,
+                    description = device.description,
+                    platform = device.platform,
+                    deviceType = device.deviceType,
+                    deviceSpec = device.deviceSpec,
+                )
+            }
         }
     }
 
@@ -160,11 +173,31 @@ object DeviceService {
      fun listDevices(includeWeb: Boolean, host: String? = null, port: Int? = null): List<Device> {
         return listAndroidDevices(host, port) +
                 listAppleDevices() +
+                listVegaDevices() +
                 if (includeWeb) {
                     listWebDevices()
                 } else {
                     listOf()
                 }
+    }
+
+    /** Discover running Vega devices (VVDs / Fire TVs) via the `vega` CLI. Best-effort: an
+     * absent SDK just yields no devices rather than failing the whole listing. */
+    fun listVegaDevices(): List<Device> {
+        return runCatching {
+            VegaCli().listDevices().map { vegaDevice ->
+                Device.Connected(
+                    instanceId = vegaDevice.serial,
+                    description = "Vega ${vegaDevice.serial}",
+                    platform = Platform.VEGA,
+                    deviceType = if (vegaDevice.isVirtual) Device.DeviceType.EMULATOR else Device.DeviceType.REAL,
+                    deviceSpec = DeviceSpec.Vega(model = vegaDevice.serial, os = DeviceSpec.Vega.DEFAULT.os),
+                )
+            }
+        }.getOrElse {
+            logger.warn("Failed to list Vega devices", it)
+            emptyList()
+        }
     }
 
     fun listWebDevices(): List<Device> {

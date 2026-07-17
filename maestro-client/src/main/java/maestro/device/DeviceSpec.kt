@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import maestro.device.locale.AndroidLocale
 import maestro.device.locale.DeviceLocale
 import maestro.device.locale.IosLocale
+import maestro.device.locale.VegaLocale
 import maestro.device.locale.WebLocale
 
 enum class CPU_ARCHITECTURE(val value: String) {
@@ -35,6 +36,7 @@ enum class CPU_ARCHITECTURE(val value: String) {
   JsonSubTypes.Type(DeviceSpec.Android::class, name = "ANDROID"),
   JsonSubTypes.Type(DeviceSpec.Ios::class, name = "IOS"),
   JsonSubTypes.Type(DeviceSpec.Tvos::class, name = "TVOS"),
+  JsonSubTypes.Type(DeviceSpec.Vega::class, name = "VEGA"),
   JsonSubTypes.Type(DeviceSpec.Web::class, name = "WEB"),
 )
 sealed class DeviceSpec {
@@ -102,6 +104,25 @@ sealed class DeviceSpec {
 
         companion object {
             val DEFAULT: Tvos = Tvos(model = "Apple-TV-4K-3rd-generation-4K", os = "tvOS-18-5")
+        }
+    }
+
+    data class Vega(
+        override val model: String,
+        override val os: String,
+        override val locale: VegaLocale = VegaLocale.EN_US,
+    ) : DeviceSpec() {
+        init {
+            require(model.isNotBlank()) { "DeviceSpec.Vega: model cannot be blank" }
+            require(os.isNotBlank()) { "DeviceSpec.Vega: os cannot be blank" }
+        }
+
+        override val platform = Platform.VEGA
+        override val osVersion: Int get() = os.removePrefix("vega-").substringBefore("-").toIntOrNull() ?: 0
+        override val deviceName: String get() = "Maestro_VEGA_${model}_${os}"
+
+        companion object {
+            val DEFAULT: Vega = Vega(model = "VirtualDevice", os = "vega-0")
         }
     }
 

@@ -86,6 +86,7 @@ class AppValidator(
             }
             Platform.ANDROID -> return
             Platform.TVOS -> return
+            Platform.VEGA -> return
             Platform.WEB -> return
         }
     }
