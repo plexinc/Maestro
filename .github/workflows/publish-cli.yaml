@@ -5,8 +5,11 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
-    if: github.repository == 'mobile-dev-inc/maestro'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # Plex fork: only publish from our own repo, never from a clone of upstream.
+    if: github.repository == 'plexinc/Maestro'
+    permissions:
+      contents: write
 
     steps:
       - name: Clone repository
@@ -19,10 +22,30 @@ jobs:
           java-version: 17
           cache: gradle
 
-      - name: Publish CLI
-        run: ./gradlew :maestro-cli:jreleaserFullRelease --no-daemon --no-parallel
+      - name: Compute Plex build number
+        id: build
         env:
-          JRELEASER_GITHUB_TOKEN: ${{ secrets.JRELEASER_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Auto-increment the fork build segment: find the highest existing
+          # cli-<CLI_VERSION>.<N> release and use N+1. No existing release for the
+          # current Maestro version (e.g. just after an upstream rebase) -> 0.
+          CLI_VERSION=$(grep '^CLI_VERSION=' maestro-cli/gradle.properties | cut -d= -f2)
+          ESCAPED=${CLI_VERSION//./\\.}
+          LATEST=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --json tagName --jq '.[].tagName' \
+            | grep -E "^cli-${ESCAPED}\.[0-9]+$" \
+            | sed -E "s/^cli-${ESCAPED}\.//" \
+            | sort -n | tail -1)
+          NEXT=$(( ${LATEST:--1} + 1 ))
+          echo "Publishing ${CLI_VERSION}.${NEXT} (previous build: ${LATEST:-none})"
+          echo "plex_build=$NEXT" >> "$GITHUB_OUTPUT"
+
+      - name: Publish CLI
+        run: ./gradlew :maestro-cli:jreleaserFullRelease -PPLEX_BUILD=${{ steps.build.outputs.plex_build }} --no-daemon --no-parallel
+        env:
+          # Same-repo GitHub Release only (brew tap publishing is disabled), so the
+          # default workflow token with contents:write is sufficient.
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Print jReleaser log
         if: always()

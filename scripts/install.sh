@@ -88,10 +88,11 @@ echo "* Create distribution directories..."
 mkdir -p "$maestro_tmp_folder"
 
 
+# Plex fork: artifacts are served straight from the plexinc/Maestro GitHub Releases.
 if [ -z "$MAESTRO_VERSION" ]; then
-    download_url="https://github.com/mobile-dev-inc/maestro/releases/latest/download/maestro.zip"
+    download_url="https://github.com/plexinc/Maestro/releases/latest/download/maestro.zip"
 else
-    download_url="https://github.com/mobile-dev-inc/maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
+    download_url="https://github.com/plexinc/Maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
 fi
 
 maestro_zip_file="${maestro_tmp_folder}/maestro.zip"
