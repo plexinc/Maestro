@@ -59,8 +59,10 @@ import maestro.orchestra.ToggleAirplaneModeCommand
 import maestro.orchestra.ToggleDarkModeCommand
 import maestro.orchestra.TravelCommand
 import maestro.orchestra.WaitForAnimationToEndCommand
+import maestro.orchestra.error.SyntaxError
 import maestro.orchestra.yaml.junit.YamlCommandsExtension
 import maestro.orchestra.yaml.junit.YamlFile
+import maestro.orchestra.yaml.junit.YamlResourceFile
 import org.junit.Assert.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -939,6 +941,51 @@ internal class YamlCommandReaderTest {
         val config = "- launchApp"
         assertThat(YamlCommandReader.findUnknownWorkspaceConfigKeys(config)).isNull()
     }
+
+    @Test
+    fun `path alias resolves against nearest config from a nested flow`() {
+        val commands = readResourceCommands("035_path_aliases/feature/deep/flowA.yaml")
+
+        assertThat(commands).containsExactly(
+            ApplyConfigurationCommand(MaestroConfig(appId = "com.example.app")),
+            RunFlowCommand(
+                sourceDescription = "@commands/login.yaml",
+                config = MaestroConfig(appId = "com.example.app"),
+                commands = commands(
+                    ApplyConfigurationCommand(MaestroConfig(appId = "com.example.app")),
+                    LaunchAppCommand(appId = "com.example.app"),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `path alias with unknown name fails`() {
+        val error = assertThrows(SyntaxError::class.java) {
+            readResourceCommands("035_path_aliases/feature/deep/aliasUnknown.yaml")
+        }
+        assertThat(error.detail).contains("Unknown path alias '@nope'")
+    }
+
+    @Test
+    fun `path alias pointing to a missing directory fails`() {
+        val error = assertThrows(SyntaxError::class.java) {
+            readResourceCommands("035_path_aliases/feature/deep/aliasBrokenTarget.yaml")
+        }
+        assertThat(error.detail).contains("not an existing directory")
+    }
+
+    @Test
+    fun `path alias without a config file fails`() {
+        val error = assertThrows(SyntaxError::class.java) {
+            readResourceCommands("036_alias_no_config.yaml")
+        }
+        assertThat(error.detail).contains("no config.yaml was found")
+    }
+
+    private fun readResourceCommands(name: String): List<Command> =
+        YamlCommandReader.readCommands(YamlResourceFile(name).path)
+            .mapNotNull(MaestroCommand::asCommand)
 
     private fun commands(vararg commands: Command): List<MaestroCommand> =
         commands.map(::MaestroCommand).toList()

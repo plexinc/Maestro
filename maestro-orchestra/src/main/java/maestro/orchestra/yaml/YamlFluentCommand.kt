@@ -80,6 +80,7 @@ import maestro.orchestra.error.InvalidFlowFile
 import maestro.orchestra.error.MediaFileNotFound
 import maestro.orchestra.error.SyntaxError
 import maestro.orchestra.util.Env.withEnv
+import maestro.orchestra.workspace.FlowPathResolver
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.exists
@@ -538,15 +539,9 @@ data class YamlFluentCommand(
         }
 
         val mediaPaths = addMedia.files.filterNotNull().map {
-            val path = flowPath.fileSystem.getPath(it)
-
-            val resolvedPath = if (path.isAbsolute) {
-                path
-            } else {
-                flowPath.resolveSibling(path).toAbsolutePath().normalize()
-            }
+            val resolvedPath = FlowPathResolver.resolve(flowPath, it)
             if (!resolvedPath.exists()) {
-                throw MediaFileNotFound("Media file at $path in flow file: $flowPath not found", path)
+                throw MediaFileNotFound("Media file at $it in flow file: $flowPath not found", resolvedPath)
             }
             resolvedPath
         }
@@ -726,13 +721,7 @@ data class YamlFluentCommand(
     }
 
     private fun resolvePath(flowPath: Path, requestedPath: String): Path {
-        val path = flowPath.fileSystem.getPath(requestedPath)
-
-        val resolvedPath = if (path.isAbsolute) {
-            path
-        } else {
-            flowPath.resolveSibling(path).toAbsolutePath().normalize()
-        }
+        val resolvedPath = FlowPathResolver.resolve(flowPath, requestedPath)
         if (resolvedPath.equals(flowPath.toAbsolutePath().normalize())) {
             throw InvalidFlowFile(
                 "Referenced Flow file can't be the same as the main Flow file: ${resolvedPath.toUri()}",
