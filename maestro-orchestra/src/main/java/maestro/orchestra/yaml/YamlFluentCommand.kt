@@ -81,6 +81,7 @@ import maestro.orchestra.yaml.schema.YamlValues
 import maestro.orchestra.error.MediaFileNotFound
 import maestro.orchestra.error.SyntaxError
 import maestro.orchestra.util.Env.withEnv
+import maestro.orchestra.workspace.FlowPathResolver
 import maestro.utils.FileAccessScope
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
@@ -541,7 +542,7 @@ data class YamlFluentCommand(
         }
 
         val mediaPaths = addMedia.files.filterNotNull().map {
-            val resolvedPath = context.scope.resolve(context.flowPath.anchorDir(), it)
+            val resolvedPath = FlowPathResolver.resolve(context.flowPath, it, context.scope)
             if (!resolvedPath.exists()) {
                 throw MediaFileNotFound("Media file at $it in flow file: ${context.flowPath} not found", resolvedPath)
             }
@@ -727,7 +728,7 @@ data class YamlFluentCommand(
     // always resolves with FileAccessScope.everything), so it calls this
     // flowPath/scope form directly rather than through the context-carrying one above.
     private fun resolvePath(flowPath: Path, requestedPath: String, scope: FileAccessScope): Path {
-        val resolvedPath = scope.resolve(flowPath.anchorDir(), requestedPath)
+        val resolvedPath = FlowPathResolver.resolve(flowPath, requestedPath, scope)
         if (resolvedPath.equals(flowPath.toAbsolutePath().normalize())) {
             throw InvalidFlowFile(
                 "Referenced Flow file can't be the same as the main Flow file: ${resolvedPath.toUri()}",

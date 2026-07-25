@@ -1,0 +1,5 @@
+flows:
+  - "**/*.yaml"
+paths:
+  commands: ./shared/commands
+  broken: ./shared/does-not-exist
