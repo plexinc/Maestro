@@ -17,6 +17,9 @@ data class WorkspaceConfig(
         ios = PlatformConfiguration.IOSConfiguration(disableAnimations = false)
     ),
     val testOutputDir: String? = null,
+    // Named directory aliases, referenced from flows as `@alias/path`. Targets are
+    // directories relative to this config.yaml's own directory (or absolute).
+    val paths: Map<String, String>? = null,
 ) {
 
     data class MaestroNotificationConfiguration(

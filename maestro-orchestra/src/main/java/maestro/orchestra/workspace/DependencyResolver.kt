@@ -102,13 +102,7 @@ object DependencyResolver {
     }
 
     private fun resolvePath(flowPath: Path, requestedPath: String): Path {
-        val path = flowPath.fileSystem.getPath(requestedPath)
-
-        return if (path.isAbsolute) {
-            path
-        } else {
-            flowPath.resolveSibling(path).toAbsolutePath()
-        }
+        return FlowPathResolver.resolve(flowPath, requestedPath)
     }
 
     private fun resolveDependencyFile(currentFile: Path, requestedPath: String?): Path? {
