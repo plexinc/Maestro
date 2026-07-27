@@ -2,6 +2,8 @@
 
 Shared context for any Claude Code skill or subagent operating in this repo. Skills (`.claude/skills/*`) reference this file rather than restating module roles; if a description here drifts from reality, fix it here once and every skill follows.
 
+> **This is a fork.** [`FORK.md`](FORK.md) lists every capability `plexinc/Maestro` adds on top of upstream — fork-only flow commands (`readFile`, `@alias` path references), platforms (tvOS, Vega/Fire TV), web-driver enhancements, bundled Studio, and distribution. Read it before writing flows or tests so you don't treat fork features as missing or reinvent them. Any new fork-only feature must be documented there in the same commit.
+
 ## Module map
 
 Top-level Gradle modules. Code lives under each module's `src/main/`.

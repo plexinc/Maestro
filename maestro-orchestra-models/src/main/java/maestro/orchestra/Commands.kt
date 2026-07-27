@@ -1035,6 +1035,33 @@ data class RunScriptCommand(
     }
 }
 
+data class ReadFileCommand(
+    val content: String, // Raw file contents, read at YAML parse time.
+    val outputVariable: String,
+    val condition: Condition? = null,
+    val sourceDescription: String? = null,
+    override val label: String? = null,
+    override val optional: Boolean = false,
+) : Command {
+
+    override val originalDescription: String
+        get() {
+            val source = sourceDescription ?: "file"
+            return if (condition == null) {
+                "Read $source into \$$outputVariable"
+            } else {
+                "Read $source into \$$outputVariable when ${condition.description()}"
+            }
+        }
+
+    override fun evaluateScripts(jsEngine: JsEngine): Command {
+        return copy(
+            condition = condition?.evaluateScripts(jsEngine),
+            label = label?.evaluateScripts(jsEngine),
+        )
+    }
+}
+
 data class WaitForAnimationToEndCommand(
     val timeout: String?,
     override val label: String? = null,

@@ -1,0 +1,5 @@
+appId: com.example.app
+---
+- readFile:
+    file: 037_readFile_data.json
+    outputVariable: output

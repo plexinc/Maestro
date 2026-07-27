@@ -29,6 +29,27 @@ class GraalJsEngineTest : JsEngineTest() {
     }
 
     @Test
+    fun `putObjectEnv exposes nested JSON fields and arrays`() {
+        engine.putObjectEnv(
+            "data",
+            mapOf(
+                "login" to mapOf("testId" to "btn"),
+                "queries" to listOf("hi", "there"),
+            )
+        )
+
+        assertThat(engine.evaluateScript("data.login.testId").toString()).isEqualTo("btn")
+        assertThat(engine.evaluateScript("data.queries[0]").toString()).isEqualTo("hi")
+    }
+
+    @Test
+    fun `putObjectEnv values persist across evaluations`() {
+        engine.putObjectEnv("data", mapOf("n" to 42))
+        engine.evaluateScript("const unrelated = 1")
+        assertThat(engine.evaluateScript("data.n").toString()).isEqualTo("42")
+    }
+
+    @Test
     fun `Backslash and newline are supported`() {
         engine.setCopiedText("\\\n")
         engine.putEnv("FOO", "\\\n")

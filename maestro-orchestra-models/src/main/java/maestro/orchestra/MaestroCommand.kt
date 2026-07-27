@@ -66,6 +66,7 @@ data class MaestroCommand(
     val runScriptCommand: RunScriptCommand? = null,
     val waitForAnimationToEndCommand: WaitForAnimationToEndCommand? = null,
     val evalScriptCommand: EvalScriptCommand? = null,
+    val readFileCommand: ReadFileCommand? = null,
     val scrollUntilVisible: ScrollUntilVisibleCommand? = null,
     val travelCommand: TravelCommand? = null,
     val startRecordingCommand: StartRecordingCommand? = null,
@@ -116,6 +117,7 @@ data class MaestroCommand(
         runScriptCommand = command as? RunScriptCommand,
         waitForAnimationToEndCommand = command as? WaitForAnimationToEndCommand,
         evalScriptCommand = command as? EvalScriptCommand,
+        readFileCommand = command as? ReadFileCommand,
         scrollUntilVisible = command as? ScrollUntilVisibleCommand,
         travelCommand = command as? TravelCommand,
         startRecordingCommand = command as? StartRecordingCommand,
@@ -164,6 +166,7 @@ data class MaestroCommand(
         runScriptCommand != null -> runScriptCommand
         waitForAnimationToEndCommand != null -> waitForAnimationToEndCommand
         evalScriptCommand != null -> evalScriptCommand
+        readFileCommand != null -> readFileCommand
         scrollUntilVisible != null -> scrollUntilVisible
         travelCommand != null -> travelCommand
         startRecordingCommand != null -> startRecordingCommand

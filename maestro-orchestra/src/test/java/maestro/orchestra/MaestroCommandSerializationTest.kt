@@ -324,6 +324,39 @@ internal class MaestroCommandSerializationTest {
     }
 
     @Test
+    fun `serialize ReadFileCommand`() {
+        // given
+        val command = MaestroCommand(
+            ReadFileCommand(
+                content = "{\"testId\":\"btn\"}",
+                outputVariable = "data",
+                sourceDescription = "data.json",
+            )
+        )
+
+        // when
+        val serializedCommandJson = command.toJson()
+        val deserializedCommand = objectMapper.readValue(serializedCommandJson, MaestroCommand::class.java)
+
+        // then
+        @Language("json")
+        val expectedJson = """
+            {
+              "readFileCommand" : {
+                "content" : "{\"testId\":\"btn\"}",
+                "outputVariable" : "data",
+                "sourceDescription" : "data.json",
+                "optional" : false
+              }
+            }
+          """.trimIndent()
+        assertThat(serializedCommandJson)
+            .isEqualTo(expectedJson)
+        assertThat(deserializedCommand)
+            .isEqualTo(command)
+    }
+
+    @Test
     fun `serialize LaunchAppCommand`() {
         // given
         val command = MaestroCommand(

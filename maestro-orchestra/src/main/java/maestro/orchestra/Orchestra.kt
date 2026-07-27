@@ -19,6 +19,7 @@
 
 package maestro.orchestra
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
@@ -161,6 +162,8 @@ class Orchestra(
 ) {
 
     private lateinit var jsEngine: JsEngine
+
+    private val readFileMapper = jacksonObjectMapper()
 
     private var copiedText: String? = null
 
@@ -428,6 +431,7 @@ class Orchestra(
             is DefineVariablesCommand -> defineVariablesCommand(command)
             is RunScriptCommand -> runScriptCommand(command)
             is EvalScriptCommand -> evalScriptCommand(command)
+            is ReadFileCommand -> readFileCommand(command)
             is ApplyConfigurationCommand -> false
             is WaitForAnimationToEndCommand -> waitForAnimationToEndCommand(command)
             is TravelCommand -> travelCommand(command)
@@ -699,6 +703,22 @@ class Orchestra(
         } else {
             throw CommandSkipped
         }
+    }
+
+    private suspend fun readFileCommand(command: ReadFileCommand): Boolean {
+        if (!evaluateCondition(command.condition, commandOptional = command.optional)) {
+            throw CommandSkipped
+        }
+
+        val parsed = try {
+            readFileMapper.readValue(command.content, Any::class.java)
+        } catch (e: Exception) {
+            val source = command.sourceDescription ?: "file"
+            throw MaestroException.InvalidCommand("Failed to parse $source as JSON: ${e.message}", e)
+        }
+        jsEngine.putObjectEnv(command.outputVariable, parsed)
+
+        return false
     }
 
     private suspend fun waitForAnimationToEndCommand(command: WaitForAnimationToEndCommand): Boolean {

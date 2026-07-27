@@ -2118,6 +2118,30 @@ class IntegrationTest {
     }
 
     @Test
+    fun `Case 149 - readFile loads JSON into a namespaced variable`() {
+        // Given
+        val commands = readCommands("149_readFile")
+
+        val driver = driver {
+        }
+
+        // When
+        Maestro(driver).use {
+            runBlocking {
+                orchestra(it).runFlow(commands)
+            }
+        }
+
+        // Then
+        driver.assertEvents(
+            listOf(
+                Event.InputText("loginBtn"),
+                Event.InputText("second"),
+            )
+        )
+    }
+
+    @Test
     fun `Case 071 - Tap on relative point`() {
         // Given
         val commands = readCommands("071_tapOnRelativePoint")
