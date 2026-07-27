@@ -210,6 +210,15 @@
         }
     }
 
+    // Fallback for driving key input when CDP Input.dispatchKeyEvent doesn't move focus
+    // (e.g. some canvas/Lightning apps listen for JS KeyboardEvents on document).
+    maestro.dispatchKey = (key, code, keyCode) => {
+        const target = document.activeElement || document.body;
+        const init = { key: key, code: code, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true };
+        target.dispatchEvent(new KeyboardEvent('keydown', init));
+        target.dispatchEvent(new KeyboardEvent('keyup', init));
+    };
+
     // https://stackoverflow.com/a/5178132
     maestro.createXPathFromElement = (domElement) => {
         var allNodes = document.getElementsByTagName('*');
