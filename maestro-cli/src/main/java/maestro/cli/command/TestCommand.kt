@@ -188,6 +188,18 @@ class TestCommand : Callable<Int> {
     private var screenSize: String? = null
 
     @Option(
+        names = ["--cdp-url"],
+        description = ["(Web only) Attach to an already-running Chrome/Electron over CDP at this URL (e.g. http://127.0.0.1:9222) instead of launching a browser"],
+    )
+    private var cdpUrl: String? = null
+
+    @Option(
+        names = ["--cdp-target"],
+        description = ["(Web only) CDP target (tile) id to drive when attaching with --cdp-url; otherwise resolved by matching APP_ID against target URLs"],
+    )
+    private var cdpTarget: String? = null
+
+    @Option(
         names = ["--analyze"],
         description = ["[Beta] Enhance the test output analysis with AI Insights"],
     )
@@ -483,6 +495,8 @@ class TestCommand : Callable<Int> {
             platform = platform ?: parent?.platform,
             isHeadless = headless,
             screenSize = screenSize,
+            cdpUrl = cdpUrl,
+            cdpTarget = cdpTarget,
             reinstallDriver = reinstallDriver,
             executionPlan = executionPlan
         ) { session ->
