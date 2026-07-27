@@ -76,6 +76,8 @@ object MaestroSessionManager {
         isStudio: Boolean = false,
         isHeadless: Boolean = false,
         screenSize: String? = null,
+        cdpUrl: String? = null,
+        cdpTarget: String? = null,
         reinstallDriver: Boolean = true,
         deviceIndex: Int? = null,
         executionPlan: WorkspaceExecutionPlanner.ExecutionPlan? = null,
@@ -122,6 +124,8 @@ object MaestroSessionManager {
             isStudio = isStudio,
             isHeadless = isHeadless,
             screenSize = screenSize,
+            cdpUrl = cdpUrl,
+            cdpTarget = cdpTarget,
             driverHostPort = driverHostPort,
             reinstallDriver = reinstallDriver,
             platformConfiguration = executionPlan?.workspaceConfig?.platform
@@ -203,6 +207,8 @@ object MaestroSessionManager {
         isStudio: Boolean,
         isHeadless: Boolean,
         screenSize: String?,
+        cdpUrl: String? = null,
+        cdpTarget: String? = null,
         reinstallDriver: Boolean,
         driverHostPort: Int?,
         platformConfiguration: PlatformConfiguration? = null,
@@ -228,7 +234,7 @@ object MaestroSessionManager {
 
                     Platform.VEGA -> createVega(selectedDevice.device.instanceId)
 
-                    Platform.WEB -> pickWebDevice(isStudio, isHeadless, screenSize)
+                    Platform.WEB -> pickWebDevice(isStudio, isHeadless, screenSize, cdpUrl, cdpTarget)
                 },
                 device = selectedDevice.device,
             )
@@ -257,7 +263,7 @@ object MaestroSessionManager {
             )
 
             selectedDevice.platform == Platform.WEB -> MaestroSession(
-                maestro = pickWebDevice(isStudio, isHeadless, screenSize),
+                maestro = pickWebDevice(isStudio, isHeadless, screenSize, cdpUrl, cdpTarget),
                 device = null
             )
 
@@ -463,8 +469,14 @@ object MaestroSessionManager {
         )
     }
 
-    private fun pickWebDevice(isStudio: Boolean, isHeadless: Boolean, screenSize: String?): Maestro {
-        return Maestro.web(isStudio, isHeadless, screenSize)
+    private fun pickWebDevice(
+        isStudio: Boolean,
+        isHeadless: Boolean,
+        screenSize: String?,
+        cdpUrl: String? = null,
+        cdpTarget: String? = null,
+    ): Maestro {
+        return Maestro.web(isStudio, isHeadless, screenSize, cdpUrl, cdpTarget)
     }
 
     private fun createVega(serial: String): Maestro {

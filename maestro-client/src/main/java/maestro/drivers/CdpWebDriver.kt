@@ -1,6 +1,7 @@
 package maestro.drivers
 
 import CdpClient
+import CdpTarget
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.runBlocking
 import maestro.Capability
@@ -53,7 +54,12 @@ private const val SYNTHETIC_COORDINATE_SPACE_OFFSET = 100000
 class CdpWebDriver(
     val isStudio: Boolean,
     private val isHeadless: Boolean = false,
-    private val screenSize: String?
+    private val screenSize: String?,
+    // Attach mode: when set (e.g. "http://127.0.0.1:9222"), attach to an already-running
+    // Chrome/Electron over CDP instead of launching our own via Selenium.
+    private val cdpUrl: String? = null,
+    // Optional explicit CDP target (tile) id to drive; otherwise resolved by URL match.
+    private val cdpTarget: String? = null,
 ) : Driver {
 
     private lateinit var cdpClient: CdpClient
@@ -64,6 +70,15 @@ class CdpWebDriver(
     private var injectedArguments: Map<String, Any> = emptyMap()
 
     private var webScreenRecorder: WebScreenRecorder? = null
+
+    private val isAttachMode: Boolean get() = cdpUrl != null
+
+    // Cached resolved target so we don't re-list on every CDP op. Cleared when a
+    // navigation invalidates it (see executeJS retry).
+    private var resolvedTarget: CdpTarget? = null
+
+    // URL hint used to resolve the target when no explicit id is given (the flow's APP_ID).
+    private var appIdHint: String? = null
 
     init {
         Maestro::class.java.getResourceAsStream("/maestro-web.js")?.let {
@@ -78,6 +93,14 @@ class CdpWebDriver(
     }
 
     override fun open() {
+        if (isAttachMode) {
+            // Attach directly to the given CDP endpoint; no Selenium session in this mode.
+            val uri = URI(cdpUrl)
+            val port = if (uri.port != -1) uri.port else 9222
+            cdpClient = CdpClient(host = uri.host ?: "localhost", port = port)
+            return
+        }
+
         seleniumDriver = createSeleniumDriver()
 
         try {
@@ -152,11 +175,19 @@ class CdpWebDriver(
         return seleniumDriver ?: error("Driver is not open")
     }
 
+    /** Resolves (and caches) the CDP target to drive by explicit id or URL match. */
+    private suspend fun resolveTarget(): CdpTarget {
+        resolvedTarget?.let { return it }
+        val target = cdpClient.resolveTarget(cdpTarget, appIdHint)
+        resolvedTarget = target
+        return target
+    }
+
     private fun executeJS(js: String): Any? {
         return runBlocking {
             repeat(JS_EXECUTION_MAX_ATTEMPTS) { attempt ->
                 try {
-                    val target = cdpClient.listTargets().first()
+                    val target = resolveTarget()
 
                     cdpClient.evaluate("$maestroWebScript", target)
 
@@ -180,6 +211,8 @@ class CdpWebDriver(
                     // briefly for it to settle and retry against a freshly listed target.
                     if (isRetryableJsError(e) && attempt < JS_EXECUTION_MAX_ATTEMPTS - 1) {
                         LOGGER.warn("Transient error executing JS, retrying (attempt ${attempt + 1})", e)
+                        // The target may have been invalidated by navigation; force a re-resolve.
+                        resolvedTarget = null
                         Thread.sleep(JS_EXECUTION_RETRY_DELAY_MS)
                     } else {
                         LOGGER.error("Failed to execute JS", e)
@@ -255,8 +288,11 @@ class CdpWebDriver(
     ) {
         injectedArguments = injectedArguments + launchArguments
 
+        // Remember the app URL so attach-mode target resolution can match the right tile.
+        if (appIdHint == null) appIdHint = appId
+
         runBlocking {
-            val target = cdpClient.listTargets().first()
+            val target = resolveTarget()
             cdpClient.openUrl(appId, target)
         }
     }
@@ -273,9 +309,10 @@ class CdpWebDriver(
     }
 
     override fun contentDescriptor(excludeKeyboardElements: Boolean): TreeNode {
-        ensureOpen()
-
-        detectWindowChange()
+        if (!isAttachMode) {
+            ensureOpen()
+            detectWindowChange()
+        }
 
         // retrieve view hierarchy from DOM
         // There are edge cases where executeJS returns null, and we cannot get the hierarchy. In this situation
@@ -363,7 +400,7 @@ class CdpWebDriver(
     }
 
     override fun clearAppState(appId: String) {
-        ensureOpen()
+        if (!isAttachMode) ensureOpen()
 
         val origin = try {
             val uri = URI(appId)
@@ -385,7 +422,7 @@ class CdpWebDriver(
 
         try {
             runBlocking {
-                val target = cdpClient.listTargets().first()
+                val target = resolveTarget()
                 cdpClient.clearDataForOrigin(origin, "all", target)
             }
         } catch (e: Exception) {
@@ -398,12 +435,22 @@ class CdpWebDriver(
     }
 
     override fun tap(point: Point) {
-        val driver = ensureOpen()
-
         if (point.x >= SYNTHETIC_COORDINATE_SPACE_OFFSET && point.y >= SYNTHETIC_COORDINATE_SPACE_OFFSET) {
             tapOnSyntheticCoordinateSpace(point)
             return
         }
+
+        if (isAttachMode) {
+            runBlocking {
+                val target = resolveTarget()
+                cdpClient.dispatchMouseEvent(target, "mouseMoved", point.x, point.y)
+                cdpClient.dispatchMouseEvent(target, "mousePressed", point.x, point.y, "left", 1)
+                cdpClient.dispatchMouseEvent(target, "mouseReleased", point.x, point.y, "left", 1)
+            }
+            return
+        }
+
+        val driver = ensureOpen()
 
         val pixelsScrolled = scrollToPoint(point)
 
@@ -441,6 +488,17 @@ class CdpWebDriver(
     }
 
     override fun longPress(point: Point) {
+        if (isAttachMode) {
+            runBlocking {
+                val target = resolveTarget()
+                cdpClient.dispatchMouseEvent(target, "mouseMoved", point.x, point.y)
+                cdpClient.dispatchMouseEvent(target, "mousePressed", point.x, point.y, "left", 1)
+                Thread.sleep(3000L)
+                cdpClient.dispatchMouseEvent(target, "mouseReleased", point.x, point.y, "left", 1)
+            }
+            return
+        }
+
         val driver = ensureOpen()
 
         val mouse = PointerInput(PointerInput.Kind.MOUSE, "default mouse")
@@ -452,8 +510,50 @@ class CdpWebDriver(
     }
 
     override fun pressKey(code: KeyCode) {
+        if (isAttachMode) {
+            dispatchCdpKey(mapToCdpKey(code))
+            return
+        }
+
         val key = mapToSeleniumKey(code)
         withActiveElement { it.sendKeys(key) }
+    }
+
+    /** D-pad / editing key as a proper CDP keyboard event pair to the resolved target. */
+    private fun dispatchCdpKey(cdpKey: CdpKey) {
+        runBlocking {
+            val target = resolveTarget()
+            cdpClient.dispatchKeyEvent(
+                target,
+                type = "rawKeyDown",
+                key = cdpKey.key,
+                code = cdpKey.code,
+                windowsVirtualKeyCode = cdpKey.vk,
+            )
+            cdpClient.dispatchKeyEvent(
+                target,
+                type = "keyUp",
+                key = cdpKey.key,
+                code = cdpKey.code,
+                windowsVirtualKeyCode = cdpKey.vk,
+            )
+        }
+    }
+
+    private data class CdpKey(val key: String, val code: String, val vk: Int)
+
+    private fun mapToCdpKey(code: KeyCode): CdpKey {
+        return when (code) {
+            KeyCode.ENTER -> CdpKey("Enter", "Enter", 13)
+            KeyCode.BACKSPACE -> CdpKey("Backspace", "Backspace", 8)
+            KeyCode.REMOTE_UP -> CdpKey("ArrowUp", "ArrowUp", 38)
+            KeyCode.REMOTE_DOWN -> CdpKey("ArrowDown", "ArrowDown", 40)
+            KeyCode.REMOTE_LEFT -> CdpKey("ArrowLeft", "ArrowLeft", 37)
+            KeyCode.REMOTE_RIGHT -> CdpKey("ArrowRight", "ArrowRight", 39)
+            KeyCode.REMOTE_CENTER -> CdpKey("Enter", "Enter", 13)
+            KeyCode.REMOTE_MENU -> CdpKey("Escape", "Escape", 27)
+            else -> error("Keycode $code is not supported on web")
+        }
     }
 
     private fun mapToSeleniumKey(code: KeyCode): Keys {
@@ -488,6 +588,22 @@ class CdpWebDriver(
     }
 
     override fun swipe(start: Point, end: Point, durationMs: Long) {
+        if (isAttachMode) {
+            runBlocking {
+                val target = resolveTarget()
+                cdpClient.dispatchMouseEvent(target, "mousePressed", start.x, start.y, "left", 1)
+                val steps = 10
+                for (i in 1..steps) {
+                    val x = start.x + (end.x - start.x) * i / steps
+                    val y = start.y + (end.y - start.y) * i / steps
+                    cdpClient.dispatchMouseEvent(target, "mouseMoved", x, y, "left")
+                    Thread.sleep(durationMs / steps)
+                }
+                cdpClient.dispatchMouseEvent(target, "mouseReleased", end.x, end.y, "left", 1)
+            }
+            return
+        }
+
         val driver = ensureOpen()
 
         val finger = PointerInput(PointerInput.Kind.TOUCH, "finger")
@@ -536,11 +652,31 @@ class CdpWebDriver(
     }
 
     override fun backPress() {
+        if (isAttachMode) {
+            // No Selenium history in attach mode; TV/Lightning treats Escape as back.
+            dispatchCdpKey(mapToCdpKey(KeyCode.REMOTE_MENU))
+            return
+        }
+
         val driver = ensureOpen()
         driver.navigate().back()
     }
 
     override fun inputText(text: String) {
+        if (isAttachMode) {
+            runBlocking {
+                val target = resolveTarget()
+                for (c in text) {
+                    // A keyDown carrying `text` is enough for Chrome to insert the character
+                    // and for canvas apps (Lightning) to receive a keydown event.
+                    cdpClient.dispatchKeyEvent(target, type = "keyDown", key = c.toString(), text = c.toString())
+                    cdpClient.dispatchKeyEvent(target, type = "keyUp", key = c.toString())
+                    Thread.sleep(random(20, 100).toLong())
+                }
+            }
+            return
+        }
+
         withActiveElement { element ->
             val jsExecutor = ensureOpen() as JavascriptExecutor
             if (element.isHtmlDateInput() && jsExecutor.inputHtmlDate(element, text)) {
@@ -555,9 +691,15 @@ class CdpWebDriver(
     }
 
     override fun openLink(link: String, appId: String?, autoVerify: Boolean, browser: Boolean) {
-        val driver = ensureOpen()
+        val url = if (link.startsWith("http")) link else "https://$link"
 
-        driver.get(if (link.startsWith("http")) link else "https://$link")
+        if (isAttachMode) {
+            runBlocking { cdpClient.openUrl(url, resolveTarget()) }
+            return
+        }
+
+        val driver = ensureOpen()
+        driver.get(url)
     }
 
     override fun hideKeyboard() {
@@ -567,7 +709,7 @@ class CdpWebDriver(
 
     override fun takeScreenshot(out: Sink, compressed: Boolean) {
         runBlocking {
-            val target = cdpClient.listTargets().first()
+            val target = resolveTarget()
             val bytes = cdpClient.captureScreenshot(target)
 
             out.buffer().use { it.write(bytes) }
@@ -575,6 +717,13 @@ class CdpWebDriver(
     }
 
     override fun startScreenRecording(out: Sink): ScreenRecording {
+        if (isAttachMode) {
+            // WebScreenRecorder is Selenium-backed; unavailable when attached over CDP.
+            return object : ScreenRecording {
+                override fun close() {}
+            }
+        }
+
         val driver = ensureOpen()
         val recorder = WebScreenRecorder(
             JcodecVideoEncoder(),
@@ -593,6 +742,11 @@ class CdpWebDriver(
     }
 
     override fun setLocation(latitude: Double, longitude: Double) {
+        if (isAttachMode) {
+            LOGGER.warn("setLocation is not supported in CDP attach mode")
+            return
+        }
+
         val driver = ensureOpen() as HasDevTools
 
         driver.devTools.createSessionIfThereIsNotOne()
@@ -615,6 +769,15 @@ class CdpWebDriver(
     }
 
     override fun eraseText(charactersToErase: Int) {
+        if (isAttachMode) {
+            for (i in 0 until charactersToErase) {
+                dispatchCdpKey(mapToCdpKey(KeyCode.BACKSPACE))
+                sleep(random(20, 50).toLong())
+            }
+            sleep(1000)
+            return
+        }
+
         withActiveElement { element ->
             for (i in 0 until charactersToErase) {
                 element.sendKeys(Keys.BACK_SPACE)

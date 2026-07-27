@@ -813,6 +813,8 @@ class Maestro(
             isStudio: Boolean,
             isHeadless: Boolean,
             screenSize: String?,
+            cdpUrl: String? = null,
+            cdpTarget: String? = null,
         ): Maestro {
             // Check that JRE is at least 11
             val version = System.getProperty("java.version")
@@ -829,6 +831,8 @@ class Maestro(
                 isStudio = isStudio,
                 isHeadless = isHeadless,
                 screenSize = screenSize,
+                cdpUrl = cdpUrl,
+                cdpTarget = cdpTarget,
             )
             driver.open()
             return Maestro(driver)

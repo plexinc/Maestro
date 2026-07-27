@@ -13,8 +13,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -58,6 +60,29 @@ class CdpClient(
         val response = httpClient.get(endpoint).bodyAsText()
 
         return json.decodeFromString(response)
+    }
+
+    /**
+     * Resolves a single target to drive, in priority order:
+     *  1. explicit [targetId] (the CDP target/tile id),
+     *  2. a target whose url equals or contains [urlMatch] (e.g. the flow's APP_ID),
+     *  3. the first target (legacy launched-Chrome behavior).
+     */
+    suspend fun resolveTarget(targetId: String? = null, urlMatch: String? = null): CdpTarget {
+        val targets = listTargets()
+        if (targets.isEmpty()) error("No CDP targets available at $host:$port")
+
+        targetId?.let { id ->
+            return targets.firstOrNull { it.id == id }
+                ?: error("No CDP target with id '$id'. Available: ${targets.map { "${it.id} -> ${it.url}" }}")
+        }
+
+        urlMatch?.let { u ->
+            targets.firstOrNull { it.url == u }?.let { return it }
+            targets.firstOrNull { it.url.contains(u) }?.let { return it }
+        }
+
+        return targets.first()
     }
 
     /**
@@ -203,6 +228,66 @@ class CdpClient(
         }
     }
 
+    /**
+     * Dispatches a synthetic keyboard event to the target (Input.dispatchKeyEvent).
+     * Used in attach mode where there is no Selenium session to route keys through.
+     */
+    suspend fun dispatchKeyEvent(
+        target: CdpTarget,
+        type: String,
+        key: String? = null,
+        code: String? = null,
+        windowsVirtualKeyCode: Int? = null,
+        text: String? = null,
+    ) {
+        val params = buildJsonObject {
+            put("type", type)
+            key?.let { put("key", it) }
+            code?.let { put("code", it) }
+            windowsVirtualKeyCode?.let {
+                put("windowsVirtualKeyCode", it)
+                put("nativeVirtualKeyCode", it)
+            }
+            text?.let { put("text", it) }
+        }
+        sendCommand("Input.dispatchKeyEvent", params, target)
+    }
+
+    /**
+     * Dispatches a synthetic mouse event to the target (Input.dispatchMouseEvent).
+     */
+    suspend fun dispatchMouseEvent(
+        target: CdpTarget,
+        type: String,
+        x: Int,
+        y: Int,
+        button: String = "none",
+        clickCount: Int = 0,
+    ) {
+        val params = buildJsonObject {
+            put("type", type)
+            put("x", x)
+            put("y", y)
+            put("button", button)
+            put("clickCount", clickCount)
+        }
+        sendCommand("Input.dispatchMouseEvent", params, target)
+    }
+
+    private suspend fun sendCommand(method: String, params: JsonObject, target: CdpTarget): String {
+        val messageId = idCounter.getAndIncrement()
+        val paramsJson = Json.encodeToString(JsonObject.serializer(), params)
+        val payload = """{"id":$messageId,"method":"$method","params":$paramsJson}"""
+
+        return evalMutex.withLock {
+            httpClient.webSocketSession { url(target.webSocketDebuggerUrl ?: error("Target ${target.id} has no WebSocket debugger URL")) }
+                .use { session ->
+                    session.send(Frame.Text(payload))
+                    session.waitForMessage(messageId)
+                }
+        }
+    }
+
     private suspend fun DefaultClientWebSocketSession.waitForMessage(messageId: Int): String {
         for (frame in incoming) {
             if (frame is Frame.Text) {
@@ -230,7 +315,11 @@ suspend fun main() {
     val targets = client.listTargets()
     println("Available pages: $targets")
 
-    val page = targets.first()
+    // Resolve the target the same way the driver does in attach mode: by URL match
+    // (e.g. the flow's APP_ID), falling back to the first target.
+    val page = client.resolveTarget(urlMatch = System.getenv("CDP_TARGET_URL"))
+    println("Resolved target: ${page.id} -> ${page.url}")
+
     val json = client.evaluate("1+1", page)
     println("Result: $json")
 
