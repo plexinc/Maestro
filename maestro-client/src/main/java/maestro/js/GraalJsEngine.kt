@@ -10,6 +10,7 @@ import org.graalvm.polyglot.HostAccess
 import org.graalvm.polyglot.PolyglotException
 import org.graalvm.polyglot.Source
 import org.graalvm.polyglot.Value
+import org.graalvm.polyglot.proxy.ProxyArray
 import org.graalvm.polyglot.proxy.ProxyObject
 import java.io.ByteArrayOutputStream
 import java.util.logging.Handler
@@ -39,13 +40,11 @@ class GraalJsEngine(
     private val outputBinding = HashMap<String, Any>()
     private val maestroBinding = HashMap<String, Any?>()
     private val envBinding = HashMap<String, String>()
+    private val objectBinding = HashMap<String, Any?>()  // named object variables (e.g. readFile JSON)
     private val envScopeStack = mutableListOf<HashMap<String, String>>()  // for scope isolation
 
     // Keys that should never be removed from context bindings
-    private val permanentBindingKeys = setOf(
-        "http", "faker", "output", "maestro",  // Kotlin-side bindings
-        "json", "relativePoint"                 // JS-defined helper functions
-    )
+    private val permanentBindingKeys = RESERVED_BINDING_KEYS
 
     private val faker = Faker()
     private val fakerPublicClasses = mutableSetOf<Class<*>>() // To avoid re-processing the same class multiple times
@@ -72,6 +71,10 @@ class GraalJsEngine(
 
     override fun putEnv(key: String, value: String) {
         this.envBinding[key] = value
+    }
+
+    override fun putObjectEnv(key: String, value: Any?) {
+        this.objectBinding[key] = toPolyglotValue(value)
     }
 
     override fun setCopiedText(text: String?) {
@@ -162,6 +165,19 @@ class GraalJsEngine(
             .forEach { bindings.removeMember(it) }
         envBinding.filterKeys { it !in permanentBindingKeys }
             .forEach { (k, v) -> bindings.putMember(k, v) }
+        // Object variables (e.g. readFile JSON) — injected as top-level identifiers so ${data.field} resolves natively.
+        objectBinding.filterKeys { it !in permanentBindingKeys }
+            .forEach { (k, v) -> bindings.putMember(k, v) }
+    }
+
+    /**
+     * Recursively wraps a Jackson-parsed structure into GraalJS values so nested field
+     * and array access (e.g. ${data.a.b[0]}) work. Maps become ProxyObjects, Lists ProxyArrays.
+     */
+    private fun toPolyglotValue(value: Any?): Any? = when (value) {
+        is Map<*, *> -> ProxyObject.fromMap(value.entries.associate { (k, v) -> k.toString() to toPolyglotValue(v) })
+        is List<*> -> ProxyArray.fromList(value.map { toPolyglotValue(it) })
+        else -> value
     }
 
     val hostAccess = HostAccess.newBuilder()
@@ -251,5 +267,14 @@ class GraalJsEngine(
             }
         }
         return this
+    }
+
+    companion object {
+        // Reserved global identifiers that must not be shadowed by user-defined variables
+        // (e.g. readFile's outputVariable). Overwriting them is silently ignored at injection time.
+        val RESERVED_BINDING_KEYS = setOf(
+            "http", "faker", "output", "maestro",  // Kotlin-side bindings
+            "json", "relativePoint"                 // JS-defined helper functions
+        )
     }
 }

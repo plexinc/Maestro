@@ -40,6 +40,7 @@ import maestro.orchestra.PasteTextCommand
 import maestro.orchestra.PressKeyCommand
 import maestro.orchestra.RepeatCommand
 import maestro.orchestra.RunFlowCommand
+import maestro.orchestra.ReadFileCommand
 import maestro.orchestra.RunScriptCommand
 import maestro.orchestra.ScrollCommand
 import maestro.orchestra.ScrollUntilVisibleCommand
@@ -241,6 +242,24 @@ internal class YamlCommandReaderTest {
             LaunchAppCommand(
                 appId = "com.example.app"
             )
+        )
+    }
+
+    @Test
+    fun readFile(
+        @YamlFile("037_readFile.yaml") commands: List<Command>,
+    ) {
+        val expectedContent = YamlCommandReaderTest::class.java.classLoader
+            .getResource("YamlCommandReaderTest/037_readFile_data.json")!!.readText()
+
+        assertThat(commands).containsExactly(
+            ApplyConfigurationCommand(MaestroConfig(appId = "com.example.app")),
+            ReadFileCommand(
+                content = expectedContent,
+                outputVariable = "data",
+                sourceDescription = "037_readFile_data.json",
+                condition = null,
+            ),
         )
     }
 
@@ -957,6 +976,14 @@ internal class YamlCommandReaderTest {
                 ),
             ),
         )
+    }
+
+    @Test
+    fun `readFile with a reserved outputVariable fails`() {
+        val error = assertThrows(SyntaxError::class.java) {
+            readResourceCommands("038_readFile_reserved.yaml")
+        }
+        assertThat(error.detail).contains("outputVariable 'output' is reserved")
     }
 
     @Test
