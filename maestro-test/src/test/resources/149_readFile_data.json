@@ -1,0 +1,4 @@
+{
+  "login": { "testId": "loginBtn" },
+  "queries": ["first", "second"]
+}

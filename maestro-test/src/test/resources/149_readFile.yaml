@@ -1,0 +1,7 @@
+appId: com.example.app
+---
+- readFile:
+    file: 149_readFile_data.json
+    outputVariable: data
+- inputText: ${data.login.testId}
+- inputText: ${data.queries[1]}

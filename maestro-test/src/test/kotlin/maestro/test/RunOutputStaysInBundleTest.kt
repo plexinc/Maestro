@@ -34,6 +34,7 @@ import maestro.orchestra.OpenLinkCommand
 import maestro.orchestra.Orchestra
 import maestro.orchestra.PasteTextCommand
 import maestro.orchestra.PressKeyCommand
+import maestro.orchestra.ReadFileCommand
 import maestro.orchestra.RepeatCommand
 import maestro.orchestra.RetryCommand
 import maestro.orchestra.RunFlowCommand
@@ -209,6 +210,7 @@ class RunOutputStaysInBundleTest {
             OpenLinkCommand::class,
             PasteTextCommand::class,
             PressKeyCommand::class,
+            ReadFileCommand::class,
             RepeatCommand::class,
             RetryCommand::class,
             RunFlowCommand::class,

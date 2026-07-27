@@ -56,6 +56,7 @@ import maestro.orchestra.PressKeyCommand
 import maestro.orchestra.RepeatCommand
 import maestro.orchestra.RetryCommand
 import maestro.orchestra.RunFlowCommand
+import maestro.orchestra.ReadFileCommand
 import maestro.orchestra.RunScriptCommand
 import maestro.orchestra.ScrollCommand
 import maestro.orchestra.ScrollUntilVisibleCommand
@@ -79,6 +80,7 @@ import maestro.orchestra.WaitForAnimationToEndCommand
 import maestro.orchestra.error.InvalidFlowFile
 import maestro.orchestra.yaml.schema.YamlValues
 import maestro.orchestra.error.MediaFileNotFound
+import maestro.js.GraalJsEngine
 import maestro.orchestra.error.SyntaxError
 import maestro.orchestra.util.Env.withEnv
 import maestro.orchestra.workspace.FlowPathResolver
@@ -140,6 +142,7 @@ data class YamlFluentCommand(
     val runScript: YamlRunScript? = null,
     val waitForAnimationToEnd: YamlWaitForAnimationToEndCommand? = null,
     val evalScript: YamlEvalScript? = null,
+    val readFile: YamlReadFile? = null,
     val scrollUntilVisible: YamlScrollUntilVisible? = null,
     val travel: YamlTravelCommand? = null,
     val startRecording: YamlStartRecording? = null,
@@ -446,6 +449,31 @@ data class YamlFluentCommand(
                     )
                 )
             )
+
+            readFile != null -> {
+                if (readFile.outputVariable.isBlank()) {
+                    throw SyntaxError("Invalid readFile command: outputVariable must not be blank")
+                }
+                if (readFile.outputVariable in GraalJsEngine.RESERVED_BINDING_KEYS) {
+                    throw SyntaxError(
+                        "Invalid readFile command: outputVariable '${readFile.outputVariable}' is reserved " +
+                            "(${GraalJsEngine.RESERVED_BINDING_KEYS.joinToString(", ")}). Choose a different name."
+                    )
+                }
+                val filePath = resolvePath(context, readFile.file)
+                listOf(
+                    MaestroCommand(
+                        ReadFileCommand(
+                            content = filePath.readText(),
+                            outputVariable = readFile.outputVariable,
+                            sourceDescription = readFile.file,
+                            condition = readFile.`when`?.toCondition(),
+                            label = readFile.label,
+                            optional = readFile.optional,
+                        )
+                    )
+                )
+            }
 
             scrollUntilVisible != null -> listOf(scrollUntilVisibleCommand(scrollUntilVisible))
             travel != null -> listOf(travelCommand(travel))

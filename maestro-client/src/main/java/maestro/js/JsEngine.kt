@@ -5,6 +5,7 @@ interface JsEngine : AutoCloseable {
     fun enterScope()
     fun leaveScope()
     fun putEnv(key: String, value: String)
+    fun putObjectEnv(key: String, value: Any?)
     fun setCopiedText(text: String?)
     fun evaluateScript(
         script: String,
