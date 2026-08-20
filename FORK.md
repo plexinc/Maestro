@@ -14,10 +14,10 @@ config key), add an entry in the same commit. The `README.md` "What this fork
 adds" section is the marketing summary; this file is the developer/agent
 reference. Keep them consistent.
 
-**Fork boundary:** commit `49a7a80d chore: setup Plex fork` is the first
+**Fork boundary:** commit `e618462a chore: setup Plex fork` is the first
 fork commit. Everything reachable above it (and not authored by the upstream
 sync) is fork-specific. To list the current stack:
-`git log --oneline 49a7a80d^..HEAD`.
+`git log --oneline e618462a^..HEAD`.
 
 ---
 
@@ -85,7 +85,7 @@ paths:
 - Unknown alias or a target that isn't an existing directory → `SyntaxError`.
 
 Code: `FlowPathResolver.kt`, `paths` on `WorkspaceConfig.kt`,
-`YamlFluentCommand.resolvePath`. Commit `0a813c7f`.
+`YamlFluentCommand.resolvePath`. Commit `08fe23ed`.
 
 ---
 
@@ -101,7 +101,7 @@ maestro test --platform tvos flow.yaml
 ```
 
 Includes a tvOS RN/Expo demo app and e2e flows under `e2e/tvos_demo_app/` and
-`e2e/workspaces/tvos_*`. Commit `16cbc1be`.
+`e2e/workspaces/tvos_*`. Commit `a220b2a0`.
 
 ### Amazon Vega / Fire TV
 
@@ -111,7 +111,7 @@ from the on-device automation toolkit, D-pad/touch/swipe/text input, screenshots
 
 Demo app + flows under `e2e/vega_demo_app/` and `e2e/workspaces/vega_demo_app/`.
 Code: `DeviceSpec.Vega`, `maestro/device/DeviceService.kt`, `VegaLocale`.
-Commit `2cf8f784`.
+Commit `1743bfdf`.
 
 ### Web driver enhancements (canvas / D-pad TV web apps)
 
@@ -119,19 +119,25 @@ For D-pad-driven or WebGL/canvas web apps (e.g. Lightning). Platform id `WEB`.
 
 - **`data-testid`-first `resource-id`.** Element `resource-id` prefers
   `data-testid`, then `id`/`ariaLabel`/`name`/title — so `id:` selectors match
-  the stable test id. (`maestro-web.js`, commit `f6e32814`.)
+  the stable test id. (`maestro-web.js`, commit `59a68e5a`.)
 - **`focused:` selector populated.** The web driver reports focus from
   `document.activeElement` and from a `data-focused="true"` flag (for canvas
   DOM-inspector bridges whose `activeElement` is always the `<canvas>`).
-  (`maestro-web.js`, commit `f91ef236`.)
+  (`maestro-web.js`, commit `4e344da2`.)
 - **D-pad / remote keys.** `KeyCode.REMOTE_{UP,DOWN,LEFT,RIGHT}` map to arrow
   keys, `REMOTE_CENTER`→Enter, `REMOTE_MENU`→Escape (back). (`WebDriver.kt`,
-  `CdpWebDriver.kt`, commit `b822c5fe`.)
+  `CdpWebDriver.kt`, commit `9314116d`.)
 - **URL-shaped `appId` ⇒ web target.** An `appId` starting with `http://` /
   `https://` is auto-detected as a web flow (no separate `url:` needed).
-  (`FileUtils.kt`, commit `f81d555a`.)
+  (`FileUtils.kt`, commit `7f36a70c`.)
 - **`--platform web` honored** when selecting the device. (`TestCommand.kt`,
-  commit `48558de4`.)
+  commit `782c6b0b`.)
+- **Attach to a running browser.** `--cdp-url` (plus optional `--cdp-target`)
+  drives an already-running Chrome/Electron webview instead of launching Chrome
+  via Selenium — e.g. one specific Lightning emulator tile. The target is
+  resolved by explicit id, else by matching `appId` against target URLs. Input
+  is dispatched over CDP in this mode; the launched-Chrome path is unchanged.
+  (`TestCommand.kt`, `CdpWebDriver.kt`, `CdpClient.kt`, commit `804fc908`.)
 
 ---
 
@@ -148,13 +154,13 @@ drive the D-pad / select / back.
 maestro studio
 ```
 
-Commits `fad61438` (restore), `d8206786` (TV-aware D-pad toggle).
+Commits `aea64004` (restore), `12d813d1` (TV-aware D-pad toggle).
 
 ### `major.minor.patch.build` versioning
 
 `CLI_VERSION` tracks upstream Maestro; a fork-owned `PLEX_BUILD` segment
 (`maestro-cli/gradle.properties`) lets the fork ship builds without drifting
-from the inherited upstream version. Commit `49a7a80d`.
+from the inherited upstream version. Commit `e618462a`.
 
 ### GitHub-direct distribution
 
@@ -167,7 +173,7 @@ curl -fsSL "https://raw.githubusercontent.com/plexinc/Maestro/main/scripts/unins
 ```
 
 Code: `scripts/install.sh`, `scripts/uninstall.sh`, `Updates.kt`, `ApiClient.kt`,
-`EnvUtils.kt`. Commit `49a7a80d`.
+`EnvUtils.kt`. Commit `e618462a`.
 
 ---
 
@@ -175,4 +181,8 @@ Code: `scripts/install.sh`, `scripts/uninstall.sh`, `Updates.kt`, `ApiClient.kt`
 
 The fork stack is rebased onto upstream via the `update-from-upstream` skill
 (`.claude/skills/update-from-upstream/`). After a rebase, re-verify every entry
-above still reflects reality.
+above still reflects reality — the `verify-fork-stack` skill
+(`.claude/skills/verify-fork-stack/`) does this reconciliation.
+
+Note the commit SHAs cited above are rewritten by every rebase, so they must be
+re-pointed at the commit with the same subject as part of the sync.

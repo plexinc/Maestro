@@ -21,6 +21,13 @@ The fork adds, on top of upstream Maestro:
 | `feat(web): expose focus state to the focused selector` | Emits `focused` into `TreeNode.focused` from `document.activeElement`/`data-focused`. |
 | `fix(web): honor -p web when selecting the web device` | Explicit `--platform web` forces web-device inclusion. |
 | `feat(cli): restore bundled Maestro Studio` | Reverts upstream's removal of the bundled Studio (#3299); restores the `maestro-studio` modules and the full `studio` command. |
+| `feat(studio): make bundled Studio TV-aware with a D-pad toggle` | Studio gains a D-pad mode for TV platforms (tvOS/Vega/Fire TV) alongside touch interaction. |
+| `feat(vega): add Amazon Vega (Fire TV) platform support` | `VegaDriver`, Vega device discovery/handling, and the `e2e/vega_demo_app` fixture. Unsupported primitives (`setLocation`, `setProxy`, `setDarkMode`, screen recording) throw or no-op deliberately. |
+| `chore: update iOS driver [skip ci]` | Bot-generated driver artifacts (iOS + tvOS zips, tvOS `.xctestrun`) produced by the fork's `update-drivers` workflow. Regenerated automatically on push — prefer upstream's binaries on conflict and let CI rebuild. |
+| `feat(orchestra): add config.yaml path aliases for flow references` | Named directory aliases under `paths:` in a workspace `config.yaml`, referenced as `"@alias/rest"`, resolved via the nearest config.yaml walking up from the flow. Replaces long `../../..` chains. Lives in `FlowPathResolver.kt`. |
+| `feat(orchestra): add readFile command and document fork additions` | `readFile` loads a JSON file into a namespaced object variable (`${data.field}`); adds object-typed JS bindings (`JsEngine.putObjectEnv`) via GraalJS proxies. Also introduces `FORK.md`. |
+| `feat(web): Support attaching to a running Chrome/Electron over CDP` | Attach mode (`--cdp-url` / `--cdp-target`) drives an already-running webview instead of launching Chrome; input routed over CDP since there is no Selenium session. |
+| `chore(fork): add verify-fork-stack skill and resync fork docs` | Fork tooling: the `verify-fork-stack` skill plus the `FORK.md` / stack-table reconciliation it enforces. |
 
 This table is the **fork commit stack** — keyed on commit subject, not SHA (rebasing rewrites SHAs, subjects are stable). Keep it in sync with `git log --oneline upstream/main..main`.
 
@@ -69,7 +76,7 @@ This table is the **fork commit stack** — keyed on commit subject, not SHA (re
 
    After resolving each step: `git add <files> && git rebase --continue`. Abort with `git rebase --abort` (then `git reset --hard fork-backup`) if it goes sideways.
 
-5. **Re-verify the stack.** Every subject in the table above must still map 1:1 to a commit in `git log --oneline upstream/main..main`. If upstream merged one of our features (so the commit dropped out during rebase), delete that row from the table here.
+5. **Re-verify the stack.** Every subject in the table above must still map 1:1 to a commit in `git log --oneline upstream/main..main`. If upstream merged one of our features (so the commit dropped out during rebase), delete that row from the table here. Also refresh the commit SHAs cited in `FORK.md` — the rebase rewrote all of them. The `verify-fork-stack` skill automates this reconciliation.
 
 6. **Build check** (fast sanity):
    ```bash
