@@ -5,6 +5,7 @@ enum class Platform(val description: String) {
     IOS("iOS"),
     TVOS("tvOS"),
     VEGA("Vega"),
+    ROKU("Roku"),
     WEB("Web");
 
     companion object {

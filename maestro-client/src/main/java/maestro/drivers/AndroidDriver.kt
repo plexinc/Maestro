@@ -311,6 +311,9 @@ class AndroidDriver(
                 KeyCode.TV_INPUT_HDMI_1 -> 243
                 KeyCode.TV_INPUT_HDMI_2 -> 244
                 KeyCode.TV_INPUT_HDMI_3 -> 245
+                KeyCode.REMOTE_INFO -> 165 // KEYCODE_INFO
+                KeyCode.REMOTE_REPLAY -> 273 // KEYCODE_MEDIA_SKIP_BACKWARD
+                KeyCode.REMOTE_SEARCH -> 84 // KEYCODE_SEARCH
             }
 
             shell("input keyevent $intCode")

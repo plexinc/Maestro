@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import maestro.device.locale.AndroidLocale
 import maestro.device.locale.DeviceLocale
 import maestro.device.locale.IosLocale
+import maestro.device.locale.RokuLocale
 import maestro.device.locale.VegaLocale
 import maestro.device.locale.WebLocale
 
@@ -37,6 +38,7 @@ enum class CPU_ARCHITECTURE(val value: String) {
   JsonSubTypes.Type(DeviceSpec.Ios::class, name = "IOS"),
   JsonSubTypes.Type(DeviceSpec.Tvos::class, name = "TVOS"),
   JsonSubTypes.Type(DeviceSpec.Vega::class, name = "VEGA"),
+  JsonSubTypes.Type(DeviceSpec.Roku::class, name = "ROKU"),
   JsonSubTypes.Type(DeviceSpec.Web::class, name = "WEB"),
 )
 sealed class DeviceSpec {
@@ -123,6 +125,31 @@ sealed class DeviceSpec {
 
         companion object {
             val DEFAULT: Vega = Vega(model = "VirtualDevice", os = "vega-0")
+        }
+    }
+
+    data class Roku(
+        override val model: String,
+        override val os: String,
+        override val locale: RokuLocale = RokuLocale.EN_US,
+        val host: String,
+    ) : DeviceSpec() {
+        init {
+            require(model.isNotBlank()) { "DeviceSpec.Roku: model cannot be blank" }
+            require(os.isNotBlank()) { "DeviceSpec.Roku: os cannot be blank" }
+        }
+
+        override val platform = Platform.ROKU
+        override val osVersion: Int get() = os.removePrefix("roku-").substringBefore(".").toIntOrNull() ?: 0
+        override val deviceName: String get() = "Maestro_ROKU_${model}"
+
+        companion object {
+            /** Host comes from the environment at access time so a late `export` is picked up. */
+            val DEFAULT: Roku get() = Roku(
+                model = "Roku",
+                os = "roku-0",
+                host = System.getenv("MAESTRO_ROKU_HOST") ?: "",
+            )
         }
     }
 

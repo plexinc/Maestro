@@ -1,0 +1,26 @@
+# Mirrors e2e/workspaces/vega_demo_app/vega-focus-flow.yaml, adapted for Roku.
+# Verifies that `focused:` selectors track D-pad focus movement through the
+# /query/app-ui hierarchy. See roku-navigation-flow.yaml for sideload steps.
+appId: dev
+tags:
+  - roku
+  - passing
+---
+- launchApp
+
+# The scene gives initial focus to the first button.
+- assertVisible:
+    id: "button-one"
+    focused: true
+- assertVisible:
+    id: "button-two"
+    focused: false
+
+# One D-pad down moves focus to the second button.
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "button-two"
+    focused: true
+- assertVisible:
+    id: "button-one"
+    focused: false

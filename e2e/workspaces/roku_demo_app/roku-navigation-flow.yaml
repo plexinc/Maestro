@@ -1,0 +1,33 @@
+# Mirrors e2e/workspaces/vega_demo_app/vega-navigation-flow.yaml, adapted for Roku.
+# Runs against the sideloaded e2e/roku_demo_app channel (appId `dev`) on a
+# developer-mode Roku pinned via MAESTRO_ROKU_HOST.
+#
+# Sideload the channel first:
+#   cd e2e/roku_demo_app && zip -r ../roku_demo_app.zip . && \
+#   curl -f -u "rokudev:$MAESTRO_ROKU_PASSWORD" --digest \
+#     -F "mysubmit=Install" -F "archive=@../roku_demo_app.zip" \
+#     "http://$MAESTRO_ROKU_HOST/plugin_install"
+appId: dev
+tags:
+  - roku
+  - passing
+---
+- launchApp
+
+# Initial state: title visible, first button focused, nothing selected.
+- assertVisible: "Roku Demo"
+- assertVisible:
+    id: "statusLabel"
+    text: "Nothing selected"
+
+# Move focus down two buttons and activate the third.
+- pressKey: "Remote Dpad Down"
+- pressKey: "Remote Dpad Down"
+- pressKey: "Remote Dpad Center"
+- assertVisible: "Selected Button Three"
+
+# Move focus back up and activate the first.
+- pressKey: "Remote Dpad Up"
+- pressKey: "Remote Dpad Up"
+- pressKey: "Remote Dpad Center"
+- assertVisible: "Selected Button One"

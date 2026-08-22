@@ -23,7 +23,7 @@ object PickDeviceView {
     }
 
     fun requestDeviceOptions(platform: Platform? = null): DeviceSpec {
-        PrintUtils.message("Please specify a device platform [android, ios, tvos, vega, web]:")
+        PrintUtils.message("Please specify a device platform [android, ios, tvos, vega, roku, web]:")
         val selectedPlatform = platform
             ?: (readlnOrNull()?.lowercase()?.let {
                 Platform.fromString(it)
@@ -34,6 +34,7 @@ object PickDeviceView {
             Platform.IOS -> DeviceSpec.Ios.DEFAULT
             Platform.TVOS -> DeviceSpec.Tvos.DEFAULT
             Platform.VEGA -> DeviceSpec.Vega.DEFAULT
+            Platform.ROKU -> DeviceSpec.Roku.DEFAULT
             Platform.WEB -> DeviceSpec.Web.DEFAULT
         }
     }

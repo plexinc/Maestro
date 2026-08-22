@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MainScene" extends="Scene">
+  <script type="text/brightscript" uri="MainScene.brs" />
+  <children>
+    <Label id="titleLabel" text="Roku Demo" translation="[100, 60]" />
+    <Button id="button-one" text="Button One" translation="[100, 160]" minWidth="400" />
+    <Button id="button-two" text="Button Two" translation="[100, 280]" minWidth="400" />
+    <Button id="button-three" text="Button Three" translation="[100, 400]" minWidth="400" />
+    <Label id="statusLabel" text="Nothing selected" translation="[100, 560]" />
+  </children>
+</component>

@@ -113,6 +113,45 @@ Demo app + flows under `e2e/vega_demo_app/` and `e2e/workspaces/vega_demo_app/`.
 Code: `DeviceSpec.Vega`, `maestro/device/DeviceService.kt`, `VegaLocale`.
 Commit `1743bfdf`.
 
+### Roku
+
+Driver for Roku devices over the **External Control Protocol** (ECP — an HTTP
+REST API on device port 8060). Platform id `ROKU` (`--platform roku`). No
+on-device driver process: view hierarchy from `/query/app-ui` (SceneGraph XML,
+dev-mode channels only), D-pad input via `/keypress/<key>`, text via
+character-by-character `LIT_` keypresses, screenshots via the dev web server
+(digest auth), app launch via `/launch/<channelId>`. Roku is D-pad-only — `tapOn`
+sends `Select` (activates the focused element), swipes/scrolls become repeated
+D-pad presses.
+
+**Device setup** (physical hardware only — Roku has no emulator):
+
+1. Enable developer mode: Home 3x, Up 2x, Right, Left, Right, Left, Right; set a
+   dev password.
+2. Set ECP network access to Permissive: Settings > System > Advanced system
+   settings > Control by mobile apps > Network access > **Permissive** (recent
+   Roku OS versions return 403 on input commands otherwise).
+
+**Device selection** — Roku devices surface through the normal device listing:
+
+```bash
+export MAESTRO_ROKU_HOST=192.168.1.100      # pin a device by IP (primary)
+export MAESTRO_ROKU_PASSWORD=devpwd          # dev-mode password (screenshots only)
+export MAESTRO_ROKU_DISCOVERY=true           # optional: SSDP LAN scan (~1s per listing)
+
+maestro test --platform roku flow.yaml
+maestro test --device 192.168.1.100 flow.yaml
+```
+
+**New KeyCodes** (also mapped on Android): `Remote Info` (the `*` options
+button), `Remote Instant Replay`, `Remote Search`. `Remote Menu` maps to `Info`
+on Roku. Studio's TV mode is auto-on for Roku, like tvOS.
+
+Demo channel + flows under `e2e/roku_demo_app/` (BrightScript; sideload steps in
+the flow headers) and `e2e/workspaces/roku_demo_app/`.
+Code: `maestro/roku/` (`RokuEcpClient`, `RokuDeviceDiscovery`, `RokuAppUIParser`,
+`RokuKeyMapping`), `drivers/RokuDriver.kt`, `DeviceSpec.Roku`, `RokuLocale`.
+
 ### Web driver enhancements (canvas / D-pad TV web apps)
 
 For D-pad-driven or WebGL/canvas web apps (e.g. Lightning). Platform id `WEB`.

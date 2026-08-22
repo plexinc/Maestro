@@ -85,15 +85,15 @@ export const DeviceProvider: React.FC<DeviceProviderProps> = ({
   }, [deviceScreenState, error, isLoading]);
 
   /**
-   * Default "TV mode" (D-pad navigation) from the device platform: on for tvOS,
-   * off otherwise. Re-derived only when the platform changes, so a manual toggle
-   * survives screen refreshes. Web/canvas TV apps can enable it by hand.
+   * Default "TV mode" (D-pad navigation) from the device platform: on for tvOS and
+   * Roku, off otherwise. Re-derived only when the platform changes, so a manual
+   * toggle survives screen refreshes. Web/canvas TV apps can enable it by hand.
    */
   useEffect(() => {
     const platform = deviceScreenState?.platform?.toUpperCase();
     if (platform && platform !== prevPlatformRef.current) {
       prevPlatformRef.current = platform;
-      setTvMode(platform === "TVOS");
+      setTvMode(platform === "TVOS" || platform === "ROKU");
     }
   }, [deviceScreenState?.platform]);
 
