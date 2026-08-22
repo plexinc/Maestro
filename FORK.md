@@ -122,7 +122,8 @@ dev-mode channels only), D-pad input via `/keypress/<key>`, text via
 character-by-character `LIT_` keypresses, screenshots via the dev web server
 (digest auth), app launch via `/launch/<channelId>`. Roku is D-pad-only — `tapOn`
 sends `Select` (activates the focused element), swipes/scrolls become repeated
-D-pad presses.
+D-pad presses. `launchApp` is a cold launch: a channel that is already running is
+exited to the home screen first so it restarts from its initial state.
 
 **Device setup** (physical hardware only — Roku has no emulator):
 

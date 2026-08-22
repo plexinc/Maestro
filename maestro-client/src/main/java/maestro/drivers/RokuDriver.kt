@@ -84,6 +84,17 @@ class RokuDriver(
     }
 
     override fun launchApp(appId: String, launchArguments: Map<String, Any>) {
+        // Maestro's launchApp is a cold launch. ECP has no terminate endpoint and the
+        // launch call resumes an already-running channel with its state intact, so exit
+        // to the home screen first to force a restart from the channel's initial state.
+        if (ecpClient.isActiveApp(appId)) {
+            ecpClient.sendKeypress("Home")
+            val exitDeadline = System.currentTimeMillis() + EXIT_TIMEOUT_MS
+            while (ecpClient.isActiveApp(appId) && System.currentTimeMillis() < exitDeadline) {
+                Thread.sleep(200)
+            }
+        }
+
         val stringParams = launchArguments.mapValues { it.value.toString() }
         ecpClient.launchChannel(appId, stringParams)
 
@@ -336,6 +347,7 @@ class RokuDriver(
     companion object {
         private val logger = LoggerFactory.getLogger(RokuDriver::class.java)
         private const val LAUNCH_TIMEOUT_MS = 10_000L
+        private const val EXIT_TIMEOUT_MS = 5_000L
         private const val LONG_PRESS_MS = 1_000L
         private const val SETTLE_TIMEOUT_MS = 3_000L
         private const val SCREEN_POLL_INTERVAL_MS = 300L

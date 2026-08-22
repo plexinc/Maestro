@@ -1,7 +1,6 @@
 package maestro.roku
 
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -179,33 +178,53 @@ class RokuEcpClient(
      * 1. POST /plugin_inspect to generate the screenshot (requires digest auth)
      * 2. GET /pkgs/dev.jpg (or .png) to download it
      *
+     * The dev server acknowledges the generation POST before the capture file is
+     * written (observed on Roku OS 14), so the download polls until the file's ETag
+     * differs from the pre-generation one; on timeout the current file is used (a
+     * re-capture of an unchanged screen can legitimately produce identical bytes).
+     *
      * Reference: roku-test-automation RokuDevice.ts.
      */
     fun takeScreenshot(out: Sink) {
+        val previousEtags = SCREENSHOT_FORMATS.associateWith { screenshotEtag(it) }
         generateScreenshot()
 
-        // Download - try jpg first, fall back to png
-        for (format in listOf("jpg", "png")) {
-            val request = Request.Builder()
-                .url("http://$host/pkgs/dev.$format")
-                .get()
-                .build()
+        val deadline = System.currentTimeMillis() + SCREENSHOT_TIMEOUT_MS
+        while (true) {
+            val timedOut = System.currentTimeMillis() >= deadline
+            for (format in SCREENSHOT_FORMATS) {
+                // Cache-bust with a timestamp so no intermediary replays an old capture
+                val request = Request.Builder()
+                    .url("http://$host/pkgs/dev.$format?time=${System.currentTimeMillis()}")
+                    .get()
+                    .build()
 
-            try {
-                val response = authClient.newCall(request).execute()
-                if (response.isSuccessful) {
-                    response.body?.let { body ->
-                        val bufferedOut = out.buffer()
-                        bufferedOut.writeAll(body.source())
-                        bufferedOut.flush()
+                try {
+                    authClient.newCall(request).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val etag = response.header("ETag")
+                            val previous = previousEtags[format]
+                            val isFresh = previous == null || etag == null || etag != previous
+                            if (isFresh || timedOut) {
+                                if (!isFresh) {
+                                    logger.debug("Screenshot ETag unchanged after ${SCREENSHOT_TIMEOUT_MS}ms; using current capture")
+                                }
+                                response.body?.let { body ->
+                                    val bufferedOut = out.buffer()
+                                    bufferedOut.writeAll(body.source())
+                                    bufferedOut.flush()
+                                }
+                                return
+                            }
+                        }
                     }
-                    response.close()
-                    return
+                } catch (e: IOException) {
+                    logger.debug("Failed to download screenshot as $format", e)
                 }
-                response.close()
-            } catch (e: IOException) {
-                logger.debug("Failed to download screenshot as $format", e)
             }
+
+            if (timedOut) break
+            Thread.sleep(SCREENSHOT_POLL_INTERVAL_MS)
         }
 
         throw IOException(
@@ -214,22 +233,92 @@ class RokuEcpClient(
         )
     }
 
-    private fun generateScreenshot() {
-        // Multipart form matches the Roku dev web server's expected format
-        val body = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("mysubmit", "Screenshot")
+    /** ETag of the current capture file, or null if none exists (or the server omits it). */
+    private fun screenshotEtag(format: String): String? {
+        val request = Request.Builder()
+            .url("http://$host/pkgs/dev.$format")
+            .head()
             .build()
+        return try {
+            authClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) response.header("ETag") else null
+            }
+        } catch (e: IOException) {
+            null
+        }
+    }
+
+    private fun generateScreenshot() {
+        val url = "http://$host/plugin_inspect"
+
+        // The dev server only executes the form action when the multipart body arrives
+        // on an already-authorized request (curl's --digest behavior: an empty-body
+        // probe collects the challenge, then the form is sent with Authorization
+        // attached up front). Sending the body on the unauthenticated request and
+        // retrying via an OkHttp authenticator gets a 200 whose action silently never
+        // ran — so the handshake is done explicitly here.
+        val probe = Request.Builder()
+            .url(url)
+            .post("".toRequestBody(null))
+            .build()
+
+        val challenge = try {
+            client.newCall(probe).execute().use { response ->
+                if (response.code == 401) response.header("WWW-Authenticate") else null
+            }
+        } catch (e: IOException) {
+            throw IOException("Screenshot generation request to Roku device at $host failed", e)
+        }
+
+        // Multipart form matches the Roku dev web server's expected format. Two quirks,
+        // both verified against Roku OS 14 hardware: the empty `archive` field is
+        // required (without it the form handler silently does nothing), and parts must
+        // carry ONLY a Content-Disposition header — the server's parser ignores parts
+        // with a per-part Content-Length, which OkHttp's MultipartBody always adds.
+        // So the body is assembled by hand, curl-style.
+        val boundary = "----MaestroRokuFormBoundary${System.nanoTime()}"
+        val body = buildString {
+            append("--$boundary\r\n")
+            append("Content-Disposition: form-data; name=\"mysubmit\"\r\n\r\n")
+            append("Screenshot\r\n")
+            append("--$boundary\r\n")
+            append("Content-Disposition: form-data; name=\"archive\"\r\n\r\n")
+            append("\r\n")
+            append("--$boundary--\r\n")
+        }.toRequestBody("multipart/form-data; boundary=$boundary".toMediaType())
 
         val request = Request.Builder()
-            .url("http://$host/plugin_inspect")
+            .url(url)
             .post(body)
+            .apply {
+                challenge
+                    ?.let { buildDigestHeader(it, "POST", "/plugin_inspect") }
+                    ?.let { header("Authorization", it) }
+            }
             .build()
 
-        try {
-            authClient.newCall(request).execute().close()
+        val responseBody = try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException(
+                        "Screenshot generation failed (HTTP ${response.code}). " +
+                            "Check the developer-mode password (MAESTRO_ROKU_PASSWORD)."
+                    )
+                }
+                response.body?.string() ?: ""
+            }
         } catch (e: IOException) {
-            logger.warn("Screenshot generation request failed", e)
+            throw IOException("Screenshot generation request to Roku device at $host failed", e)
+        }
+
+        // The dev server reports the result inside the returned page (RTA pattern);
+        // anything else means no fresh capture was written to /pkgs/dev.jpg.
+        if (!responseBody.contains("Screenshot ok")) {
+            logger.debug("plugin_inspect did not confirm: {}", responseBody.replace("\n", " ").take(300))
+            throw IOException(
+                "Roku device at $host did not confirm the screenshot " +
+                    "(requires a sideloaded dev channel in the foreground)."
+            )
         }
     }
 
@@ -257,6 +346,18 @@ class RokuEcpClient(
 
     private fun buildDigestAuthRequest(response: Response): Request? {
         val challengeHeader = response.header("WWW-Authenticate") ?: return null
+        val authValue = buildDigestHeader(
+            challengeHeader = challengeHeader,
+            method = response.request.method,
+            uri = response.request.url.encodedPath,
+        ) ?: return null
+
+        return response.request.newBuilder()
+            .header("Authorization", authValue)
+            .build()
+    }
+
+    private fun buildDigestHeader(challengeHeader: String, method: String, uri: String): String? {
         if (!challengeHeader.startsWith("Digest ", ignoreCase = true)) return null
 
         val params = parseDigestChallenge(challengeHeader.removePrefix("Digest ").removePrefix("digest "))
@@ -264,8 +365,6 @@ class RokuEcpClient(
         val nonce = params["nonce"] ?: return null
         val qop = params["qop"]
 
-        val method = response.request.method
-        val uri = response.request.url.encodedPath
         val nc = String.format("%08x", digestNonceCount.incrementAndGet())
         val cnonce = String.format("%08x", System.nanoTime())
 
@@ -278,7 +377,7 @@ class RokuEcpClient(
             md5Hex("$ha1:$nonce:$ha2")
         }
 
-        val authValue = buildString {
+        return buildString {
             append("Digest username=\"$DEV_USERNAME\"")
             append(", realm=\"$realm\"")
             append(", nonce=\"$nonce\"")
@@ -290,10 +389,6 @@ class RokuEcpClient(
             }
             append(", response=\"$digestResponse\"")
         }
-
-        return response.request.newBuilder()
-            .header("Authorization", authValue)
-            .build()
     }
 
     // --- Internal HTTP helpers ---
@@ -379,6 +474,9 @@ class RokuEcpClient(
 
         const val DEFAULT_ECP_PORT = 8060
         private const val DEV_USERNAME = "rokudev"
+        private val SCREENSHOT_FORMATS = listOf("jpg", "png")
+        private const val SCREENSHOT_TIMEOUT_MS = 10_000L
+        private const val SCREENSHOT_POLL_INTERVAL_MS = 250L
 
         internal fun parseDigestChallenge(header: String): Map<String, String> {
             val params = mutableMapOf<String, String>()
