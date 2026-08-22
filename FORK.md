@@ -115,6 +115,8 @@ Commit `1743bfdf`.
 
 ### Roku
 
+Contributed by the [Nami](https://www.nami.ml) team ([rku.dev](https://www.rku.dev)).
+
 Driver for Roku devices over the **External Control Protocol** (ECP — an HTTP
 REST API on device port 8060). Platform id `ROKU` (`--platform roku`). No
 on-device driver process: view hierarchy from `/query/app-ui` (SceneGraph XML,
