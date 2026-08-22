@@ -149,7 +149,9 @@ button), `Remote Instant Replay`, `Remote Search`. `Remote Menu` maps to `Info`
 on Roku. Studio's TV mode is auto-on for Roku, like tvOS.
 
 Demo channel + flows under `e2e/roku_demo_app/` (BrightScript; sideload steps in
-the flow headers) and `e2e/workspaces/roku_demo_app/`.
+the flow headers) and `e2e/workspaces/roku_demo_app/` — mirrors the tvOS/Vega
+demo apps (same screens, labels, and testIDs: Home menu, 2x2 navigation grid,
+native-Keyboard text input, programmatic-focus test).
 Code: `maestro/roku/` (`RokuEcpClient`, `RokuDeviceDiscovery`, `RokuAppUIParser`,
 `RokuKeyMapping`), `drivers/RokuDriver.kt`, `DeviceSpec.Roku`, `RokuLocale`.
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="NavigationScreen" extends="Group">
+  <script type="text/brightscript" uri="NavigationScreen.brs" />
+  <interface>
+    <field id="done" type="boolean" alwaysNotify="true" />
+  </interface>
+  <children>
+    <Label id="titleLabel" text="Navigation Test" translation="[100, 60]" />
+    <Button id="grid-top-left" text="Top Left" translation="[100, 160]" minWidth="480" />
+    <Button id="grid-top-right" text="Top Right" translation="[620, 160]" minWidth="480" />
+    <Button id="grid-bottom-left" text="Bottom Left" translation="[100, 280]" minWidth="480" />
+    <Button id="grid-bottom-right" text="Bottom Right" translation="[620, 280]" minWidth="480" />
+    <Button id="back-button" text="Back" translation="[100, 420]" minWidth="480" />
+  </children>
+</component>

@@ -1,39 +1,34 @@
-' Three individually-id'd buttons (not a ButtonGroup) so Maestro flows can
-' assert focus per-button via `id:` + `focused:` selectors. Up/Down key events
-' bubble from the focused button to the scene, which moves focus manually.
+' Mirrors the tvOS/Vega demo apps (e2e/tvos_demo_app, e2e/vega_demo_app) — same
+' screens, labels and testIDs — re-implemented in BrightScript/SceneGraph. The Home
+' menu opens one test screen at a time; each screen reports "done" to return Home.
 sub init()
-    m.buttons = [
-        m.top.findNode("button-one"),
-        m.top.findNode("button-two"),
-        m.top.findNode("button-three")
-    ]
-    m.status = m.top.findNode("statusLabel")
-    m.focusIndex = 0
+    m.home = m.top.findNode("homeScreen")
+    m.screens = {
+        navigation: m.top.findNode("navigationScreen"),
+        textinput: m.top.findNode("textInputScreen"),
+        focus: m.top.findNode("focusScreen")
+    }
 
-    for each button in m.buttons
-        button.observeField("buttonSelected", "onButtonSelected")
+    m.home.observeField("selection", "onMenuSelection")
+    for each name in m.screens
+        m.screens[name].observeField("done", "onScreenDone")
     end for
 
-    m.buttons[0].setFocus(true)
+    ' Creating the (hidden) TextInputScreen's Keyboard can grab input focus after
+    ' HomeScreen's init already claimed it — re-assert the default focus last.
+    m.home.callFunc("focusDefault")
 end sub
 
-sub onButtonSelected(event as object)
-    node = event.getRoSGNode()
-    m.status.text = "Selected " + node.text
+sub onMenuSelection(event as object)
+    target = m.screens[event.getData()]
+    if target = invalid then return
+    m.home.visible = false
+    target.visible = true
 end sub
 
-function onKeyEvent(key as string, press as boolean) as boolean
-    if not press then return false
-
-    if key = "down" and m.focusIndex < m.buttons.count() - 1 then
-        m.focusIndex = m.focusIndex + 1
-        m.buttons[m.focusIndex].setFocus(true)
-        return true
-    else if key = "up" and m.focusIndex > 0 then
-        m.focusIndex = m.focusIndex - 1
-        m.buttons[m.focusIndex].setFocus(true)
-        return true
-    end if
-
-    return false
-end function
+sub onScreenDone()
+    for each name in m.screens
+        m.screens[name].visible = false
+    end for
+    m.home.visible = true
+end sub

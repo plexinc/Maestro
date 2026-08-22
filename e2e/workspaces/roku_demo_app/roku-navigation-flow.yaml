@@ -14,20 +14,56 @@ tags:
 ---
 - launchApp
 
-# Initial state: title visible, first button focused, nothing selected.
-- assertVisible: "Roku Demo"
+# Home loads with the first menu item focused.
+- assertVisible: "Home"
 - assertVisible:
-    id: "statusLabel"
-    text: "Nothing selected"
+    id: "menu-navigation"
+    focused: true
 
-# Move focus down two buttons and activate the third.
+# Navigate down through the menu.
 - pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "menu-text-input"
+    focused: true
 - pressKey: "Remote Dpad Down"
-- pressKey: "Remote Dpad Center"
-- assertVisible: "Selected Button Three"
+- assertVisible:
+    id: "menu-focus"
+    focused: true
 
-# Move focus back up and activate the first.
+# Navigate back up.
 - pressKey: "Remote Dpad Up"
 - pressKey: "Remote Dpad Up"
+- assertVisible:
+    id: "menu-navigation"
+    focused: true
+
+# Enter the Navigation Test screen.
 - pressKey: "Remote Dpad Center"
-- assertVisible: "Selected Button One"
+- assertVisible: "Navigation Test"
+- assertVisible:
+    id: "grid-top-left"
+    focused: true
+
+# Move around the 2x2 grid with the D-pad.
+- pressKey: "Remote Dpad Right"
+- assertVisible:
+    id: "grid-top-right"
+    focused: true
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "grid-bottom-right"
+    focused: true
+- pressKey: "Remote Dpad Left"
+- assertVisible:
+    id: "grid-bottom-left"
+    focused: true
+
+# Focus the Back button and return Home.
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "back-button"
+    focused: true
+- pressKey: "Remote Dpad Center"
+- assertVisible:
+    id: "menu-navigation"
+    focused: true

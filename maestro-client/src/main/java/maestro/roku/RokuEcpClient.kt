@@ -63,24 +63,24 @@ class RokuEcpClient(
     // --- Key Input ---
 
     fun sendKeypress(key: String) {
-        ecpPost("keypress/${URLEncoder.encode(key, "UTF-8")}")
+        ecpPost("keypress/${encodePathSegment(key)}")
         if (keypressDelayMs > 0) {
             Thread.sleep(keypressDelayMs)
         }
     }
 
     fun sendKeyDown(key: String) {
-        ecpPost("keydown/${URLEncoder.encode(key, "UTF-8")}")
+        ecpPost("keydown/${encodePathSegment(key)}")
     }
 
     fun sendKeyUp(key: String) {
-        ecpPost("keyup/${URLEncoder.encode(key, "UTF-8")}")
+        ecpPost("keyup/${encodePathSegment(key)}")
     }
 
     /** Types text character-by-character via ECP `LIT_` keypresses. */
     fun sendText(text: String) {
         for (char in text) {
-            ecpPost("keypress/${URLEncoder.encode("LIT_$char", "UTF-8")}")
+            ecpPost("keypress/${encodePathSegment("LIT_$char")}")
             if (keypressDelayMs > 0) {
                 Thread.sleep(keypressDelayMs)
             }
@@ -477,6 +477,12 @@ class RokuEcpClient(
         private val SCREENSHOT_FORMATS = listOf("jpg", "png")
         private const val SCREENSHOT_TIMEOUT_MS = 10_000L
         private const val SCREENSHOT_POLL_INTERVAL_MS = 250L
+
+        /** Percent-encode a URL path segment. URLEncoder alone form-encodes a space as
+         * `+`, which ECP would deliver as a literal plus (`LIT_+` types "+", not " "). */
+        internal fun encodePathSegment(value: String): String {
+            return URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+        }
 
         internal fun parseDigestChallenge(header: String): Map<String, String> {
             val params = mutableMapOf<String, String>()
