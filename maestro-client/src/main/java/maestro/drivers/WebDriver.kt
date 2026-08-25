@@ -297,10 +297,19 @@ class WebDriver(
             lastSeenWindowHandles = driver.windowHandles
 
             if (newHandles.isNotEmpty()) {
-                val newHandle = newHandles.first();
-                LOGGER.info("Detected a window change, switching to new window handle $newHandle")
+                val newHandle = newHandles.first()
 
+                // Newer Chrome can spawn an empty helper window; switching to it
+                // strands the session on a blank page. Only follow real content.
+                val current = driver.windowHandle
                 driver.switchTo().window(newHandle)
+                val url = driver.currentUrl ?: ""
+                if (url.isBlank() || url == "data:," || url.startsWith("about:")) {
+                    LOGGER.info("Ignoring blank new window $newHandle ($url)")
+                    driver.switchTo().window(current)
+                    return
+                }
+                LOGGER.info("Detected a window change, switching to new window handle $newHandle")
 
                 try {
                     webScreenRecorder?.onWindowChange()

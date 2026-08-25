@@ -82,7 +82,10 @@ class CdpClient(
             targets.firstOrNull { it.url.contains(u) }?.let { return it }
         }
 
-        return targets.first()
+        // A launched Chrome carries an empty helper tab (data:, / about:blank);
+        // driving that strands the whole session on a blank page.
+        return targets.firstOrNull { it.url != "data:," && !it.url.startsWith("about:") }
+            ?: targets.first()
     }
 
     /**
