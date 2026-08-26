@@ -29,6 +29,8 @@ internal class RokuAppUIParserTest {
                 <RenderableNode name="hiddenKeyboard" subtype="Group" visible="false" bounds="{0, 900, 1920, 180}">
                   <Button name="keyboard-key-a" text="A" focusable="true" bounds="{0, 0, 100, 100}"/>
                 </RenderableNode>
+                <RenderableNode name="hero" subtype="LayoutGroup" bounds="{0, 480, 1920, 100}"/>
+                <Label name="truncatedBounds" text="Truncated" bounds="{40}" translation="{80}"/>
                 <RowListItem name="row0" bounds="{0, 600, 1920, 300}">
                   <MarkupGrid name="grid0" bounds="{60, 0, 1800, 300}">
                     <Poster name="poster0" uri="pkg:/images/poster.png" bounds="{0, 0, 300, 300}"/>
@@ -112,6 +114,24 @@ internal class RokuAppUIParserTest {
         val root = parse()
         assertThat(root.byId("hiddenKeyboard")).isNull()
         assertThat(root.byId("keyboard-key-a")).isNull()
+    }
+
+    @Test
+    fun `reports the SceneGraph subtype the device sent`() {
+        val root = parse()
+        // The attribute wins over the element name, which says nothing for a
+        // generic RenderableNode...
+        assertThat(root.byId("hero")!!.attributes["subtype"]).isEqualTo("LayoutGroup")
+        // ...and the element name is the fallback when there is no attribute.
+        assertThat(root.byId("titleLabel")!!.attributes["subtype"]).isEqualTo("Label")
+    }
+
+    // A short array is unusable, and callers index it positionally.
+    @Test
+    fun `a truncated bounds or translation array is ignored, not indexed`() {
+        val node = parse().byId("truncatedBounds")
+        assertThat(node).isNotNull()
+        assertThat(node!!.attributes).doesNotContainKey("bounds")
     }
 
     @Test

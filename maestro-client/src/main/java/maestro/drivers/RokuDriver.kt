@@ -71,7 +71,10 @@ class RokuDriver(
     }
 
     override fun deviceInfo(): DeviceInfo {
-        val info = deviceInfo ?: ecpClient.getDeviceInfo()
+        // Cache the retry too: contentDescriptor reads this field on every hierarchy
+        // dump, so an uncached fallback is an extra ECP round trip per command.
+        val info = deviceInfo
+            ?: ecpClient.getDeviceInfo()?.also { deviceInfo = it }
             ?: throw IllegalStateException("Failed to get Roku device info")
 
         return DeviceInfo(

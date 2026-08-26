@@ -82,7 +82,11 @@ object RokuAppUIParser {
 
     private fun parseNode(element: Element, parentOffset: Offset, parentIsRowListItem: Boolean = false): TreeNode? {
         val id = element.getAttribute("name").ifEmpty { null }
-        val subtype = if (element.nodeName == "RenderableNode") "Group" else element.nodeName
+        // ECP reports the SceneGraph type in a `subtype` attribute; the element name is
+        // only a fallback, and for a generic `RenderableNode` it says nothing at all.
+        val subtype = element.getAttribute("subtype").ifEmpty {
+            if (element.nodeName == "RenderableNode") "Group" else element.nodeName
+        }
         val focusable = element.getAttribute("focusable") == "true"
         val focused = element.getAttribute("focused") == "true"
         val visible = element.getAttribute("visible") != "false"
@@ -95,8 +99,9 @@ object RokuAppUIParser {
         // hidden element and assertNotVisible fail on one.
         if (!visible || opacity <= 0) return null
 
-        val translation = parseArray(element.getAttribute("translation"))
-        val bounds = parseArray(element.getAttribute("bounds"))
+        // Arity is enforced on the way in, so every read below is in range.
+        val translation = parseArray(element.getAttribute("translation"), minSize = 2)
+        val bounds = parseArray(element.getAttribute("bounds"), minSize = 4)
         val text = element.getAttribute("text").ifEmpty { null }
         val color = element.getAttribute("color").ifEmpty { null }
         val uri = element.getAttribute("uri").ifEmpty { null }
@@ -115,7 +120,7 @@ object RokuAppUIParser {
             parentOffset
         }
 
-        val sceneRect = if (bounds != null && bounds.size >= 4) {
+        val sceneRect = if (bounds != null) {
             SceneRect(
                 x = bounds[0] + parentOffset.x,
                 y = bounds[1] + parentOffset.y,
@@ -160,16 +165,22 @@ object RokuAppUIParser {
         )
     }
 
-    private fun parseArray(value: String?): DoubleArray? {
+    /**
+     * Parses a Roku numeric array attribute, or null if it doesn't hold at least
+     * [minSize] values — a short array is no more usable than a missing one, and
+     * callers index it positionally.
+     */
+    private fun parseArray(value: String?, minSize: Int): DoubleArray? {
         if (value.isNullOrEmpty()) return null
         // Roku returns arrays with curly braces: {0, 0, 1920, 1080}
         val cleaned = value.replace("{", "").replace("}", "").trim()
         if (cleaned.isEmpty()) return null
-        return try {
+        val parsed = try {
             cleaned.split(",").map { it.trim().toDouble() }.toDoubleArray()
         } catch (e: NumberFormatException) {
-            null
+            return null
         }
+        return parsed.takeIf { it.size >= minSize }
     }
 
     private fun getChildElements(parent: Element): List<Element> {

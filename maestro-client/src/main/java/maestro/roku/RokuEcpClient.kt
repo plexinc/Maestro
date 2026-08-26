@@ -16,7 +16,6 @@ import java.io.IOException
 import java.net.URLEncoder
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -44,7 +43,9 @@ class RokuEcpClient(
         .writeTimeout(10, TimeUnit.SECONDS)
         .build()
 
-    private val digestNonceCount = AtomicInteger(0)
+    private val digestLock = Any()
+    private var digestNonce: String? = null
+    private var digestNonceCount = 0
 
     private val authClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -351,7 +352,9 @@ class RokuEcpClient(
 
     fun close() {
         client.dispatcher.executorService.shutdown()
+        client.connectionPool.evictAll()
         authClient.dispatcher.executorService.shutdown()
+        authClient.connectionPool.evictAll()
     }
 
     // --- Digest Auth ---
@@ -369,6 +372,15 @@ class RokuEcpClient(
             .build()
     }
 
+    /** RFC 2617: `nc` counts requests sent with one nonce, restarting at 1 for a new one. */
+    private fun nextNonceCount(nonce: String): Int = synchronized(digestLock) {
+        if (nonce != digestNonce) {
+            digestNonce = nonce
+            digestNonceCount = 0
+        }
+        ++digestNonceCount
+    }
+
     private fun buildDigestHeader(challengeHeader: String, method: String, uri: String): String? {
         if (!challengeHeader.startsWith("Digest ", ignoreCase = true)) return null
 
@@ -377,7 +389,7 @@ class RokuEcpClient(
         val nonce = params["nonce"] ?: return null
         val qop = params["qop"]
 
-        val nc = String.format("%08x", digestNonceCount.incrementAndGet())
+        val nc = String.format("%08x", nextNonceCount(nonce))
         val cnonce = String.format("%08x", System.nanoTime())
 
         val ha1 = md5Hex("$DEV_USERNAME:$realm:$password")

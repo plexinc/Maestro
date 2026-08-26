@@ -24,7 +24,8 @@ tags:
 - inputText: "Hello Roku"
 - assertVisible: "Typed: Hello Roku"
 
-# Erase and retype.
-- eraseText
+# Erase and retype. The count is explicit because every character is a separate ECP
+# Backspace keypress: the default of 50 would spend ~5s clearing 10 characters.
+- eraseText: 12
 - inputText: "Maestro Test"
 - assertVisible: "Typed: Maestro Test"
