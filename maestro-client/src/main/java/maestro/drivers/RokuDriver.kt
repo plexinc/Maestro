@@ -200,10 +200,8 @@ class RokuDriver(
     }
 
     override fun scrollVertical() {
-        // Simulate scroll by moving focus down
-        repeat(SWIPE_KEY_PRESSES) {
-            ecpClient.sendKeypress("Down")
-        }
+        // Scrolling down the page is a swipe up, as on Vega and web.
+        swipe(SwipeDirection.UP, 0)
     }
 
     override fun isKeyboardVisible(): Boolean {
@@ -212,29 +210,22 @@ class RokuDriver(
     }
 
     override fun swipe(start: Point, end: Point, durationMs: Long) {
-        // Translate swipe direction into D-pad presses
         val dx = end.x - start.x
         val dy = end.y - start.y
 
-        val key = when {
-            abs(dy) > abs(dx) && dy < 0 -> "Up"
-            abs(dy) > abs(dx) && dy >= 0 -> "Down"
-            dx < 0 -> "Left"
-            else -> "Right"
+        val direction = when {
+            abs(dy) > abs(dx) && dy < 0 -> SwipeDirection.UP
+            abs(dy) > abs(dx) -> SwipeDirection.DOWN
+            dx < 0 -> SwipeDirection.LEFT
+            else -> SwipeDirection.RIGHT
         }
-
-        repeat(SWIPE_KEY_PRESSES) {
-            ecpClient.sendKeypress(key)
-        }
+        swipe(direction, durationMs)
     }
 
     override fun swipe(swipeDirection: SwipeDirection, durationMs: Long) {
-        val key = when (swipeDirection) {
-            SwipeDirection.UP -> "Up"
-            SwipeDirection.DOWN -> "Down"
-            SwipeDirection.LEFT -> "Left"
-            SwipeDirection.RIGHT -> "Right"
-        }
+        // A swipe on Roku is repeated D-pad presses in the direction the content moves,
+        // which is the opposite of the direction the finger travels.
+        val key = RokuKeyMapping.toEcpKey(swipeDirection)
         repeat(SWIPE_KEY_PRESSES) {
             ecpClient.sendKeypress(key)
         }

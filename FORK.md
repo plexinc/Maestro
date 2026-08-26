@@ -124,9 +124,12 @@ dev-mode channels only), D-pad input via `/keypress/<key>`, text via
 character-by-character `LIT_` keypresses, screenshots via the dev web server
 (digest auth), app launch via `/launch/<channelId>`. Roku is D-pad-only — `tapOn`
 sends `Select` (activates the focused element), swipes/scrolls become repeated
-D-pad presses. `launchApp` is a cold launch: a channel that is already running is
-exited to the home screen first so it restarts from its initial state, and it
-fails the flow if the channel never becomes the active app.
+D-pad presses in the direction the *content* moves — `swipe: UP` reveals what is
+below it, so it presses Down, and `scroll` is `swipe: UP`, as on Vega and web.
+`launchApp` is a cold launch: a channel that is already running is exited to the
+home screen first so it restarts from its initial state, and it fails the flow if
+the channel never becomes the active app. A launch (or an `openLink` deep link)
+carries only the parameters the flow asked for.
 
 A rejected ECP command fails the flow rather than logging a warning — otherwise a
 device with ECP access set to anything but Permissive serves `/query/app-ui` while

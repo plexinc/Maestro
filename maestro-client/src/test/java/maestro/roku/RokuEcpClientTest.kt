@@ -77,6 +77,64 @@ internal class RokuEcpClientTest {
         }
     }
 
+    // No RTA_LAUNCH: it asks an RTA channel not to restart, which contradicts the cold
+    // launch the driver guarantees, and it rides along on every deep link.
+    @Test
+    fun `launch sends only the parameters it was given`() {
+        withServer { server, client ->
+            server.enqueue(MockResponse().setResponseCode(200))
+
+            client.launchChannel("dev", mapOf("contentId" to "abc123"))
+
+            assertThat(server.takeRequest().path).isEqualTo("/launch/dev?contentId=abc123")
+        }
+    }
+
+    @Test
+    fun `a launch with no parameters sends no query string`() {
+        withServer { server, client ->
+            server.enqueue(MockResponse().setResponseCode(200))
+
+            client.launchChannel("dev")
+
+            assertThat(server.takeRequest().path).isEqualTo("/launch/dev")
+        }
+    }
+
+    @Test
+    fun `parses a well-formed query response`() {
+        withServer { server, client ->
+            server.enqueue(
+                MockResponse().setBody(
+                    """<active-app><app id="dev" type="appl" version="1.0">Maestro Roku Demo</app></active-app>"""
+                )
+            )
+
+            val app = client.getActiveApp()
+
+            assertThat(app?.id).isEqualTo("dev")
+            assertThat(app?.title).isEqualTo("Maestro Roku Demo")
+        }
+    }
+
+    // The XML comes off the network, so the parser must refuse doctypes outright.
+    @Test
+    fun `a query response declaring a doctype is rejected`() {
+        withServer { server, client ->
+            server.enqueue(
+                MockResponse().setBody(
+                    """
+                    <?xml version="1.0"?>
+                    <!DOCTYPE active-app [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+                    <active-app><app id="dev">&xxe;</app></active-app>
+                    """.trimIndent()
+                )
+            )
+
+            assertThat(client.getActiveApp()).isNull()
+        }
+    }
+
     // Queries stay tolerant: callers poll them and report an unavailable hierarchy
     // themselves, so a failed read is null rather than a thrown flow failure.
     @Test

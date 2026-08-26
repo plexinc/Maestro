@@ -1,6 +1,7 @@
 package maestro.roku
 
 import maestro.KeyCode
+import maestro.SwipeDirection
 
 /**
  * Maps Maestro [KeyCode] values to Roku ECP key strings.
@@ -38,6 +39,20 @@ object RokuKeyMapping {
     )
 
     fun toEcpKey(keyCode: KeyCode): String? = mapping[keyCode]
+
+    /**
+     * D-pad key for a swipe. A swipe drags the content, so it reveals what lies on the
+     * far side: swiping up brings up what is *below*, which on a focus-driven UI is a
+     * move down. Every direction therefore inverts. Matches the touch platforms, where
+     * `scrollVertical()` is `swipe(UP)` (`VegaDriver`), and web, where swiping up
+     * increases `scrollY`.
+     */
+    fun toEcpKey(swipeDirection: SwipeDirection): String = when (swipeDirection) {
+        SwipeDirection.UP -> "Down"
+        SwipeDirection.DOWN -> "Up"
+        SwipeDirection.LEFT -> "Right"
+        SwipeDirection.RIGHT -> "Left"
+    }
 
     fun supportedKeyCodes(): Set<KeyCode> = mapping.keys
 }

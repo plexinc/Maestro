@@ -17,6 +17,7 @@ import java.net.URLEncoder
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -89,14 +90,19 @@ class RokuEcpClient(
 
     // --- App Lifecycle ---
 
+    /**
+     * Launches a channel with the caller's parameters and nothing else. No
+     * `RTA_LAUNCH` flag: it asks a roku-test-automation channel not to restart, which
+     * is the opposite of the cold launch [maestro.drivers.RokuDriver.launchApp]
+     * guarantees by exiting to Home first — and on any other channel it is an
+     * unexpected parameter arriving alongside the deep link the flow asked for.
+     */
     fun launchChannel(channelId: String, params: Map<String, String> = emptyMap()) {
-        val allParams = params.toMutableMap()
-        allParams["RTA_LAUNCH"] = "1" // Prevent restart if already running (RTA pattern)
-
-        val queryString = allParams.entries.joinToString("&") { (k, v) ->
+        val queryString = params.entries.joinToString("&") { (k, v) ->
             "${URLEncoder.encode(k, "UTF-8")}=${URLEncoder.encode(v, "UTF-8")}"
         }
-        ecpPost("launch/$channelId?$queryString")
+        val path = if (queryString.isEmpty()) "launch/$channelId" else "launch/$channelId?$queryString"
+        ecpPost(path)
     }
 
     fun getActiveApp(): ActiveApp? {
@@ -430,15 +436,23 @@ class RokuEcpClient(
 
         return try {
             val bytes = response.body?.bytes() ?: return null
-            documentBuilderFactory
-                .newDocumentBuilder()
-                .parse(ByteArrayInputStream(bytes))
+            parseXml(bytes)
         } catch (e: Exception) {
             logger.warn("Failed to parse XML from $path", e)
             null
         } finally {
             response.close()
         }
+    }
+
+    /**
+     * Parses ECP XML. [DocumentBuilderFactory] is not thread-safe for
+     * `newDocumentBuilder()` and the driver polls the hierarchy from more than one
+     * thread, so the shared factory is only touched under a lock.
+     */
+    private fun parseXml(bytes: ByteArray): Document {
+        val builder = synchronized(documentBuilderFactory) { documentBuilderFactory.newDocumentBuilder() }
+        return builder.parse(ByteArrayInputStream(bytes))
     }
 
     /**
@@ -507,7 +521,16 @@ class RokuEcpClient(
 
     companion object {
         private val logger = LoggerFactory.getLogger(RokuEcpClient::class.java)
-        private val documentBuilderFactory = DocumentBuilderFactory.newInstance()
+        // The XML is read off the network, so the parser takes no DTDs or external
+        // entities. Hardened once here; see parseXml for the locking.
+        private val documentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
+            setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            setFeature("http://xml.org/sax/features/external-general-entities", false)
+            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            isXIncludeAware = false
+            isExpandEntityReferences = false
+        }
 
         const val DEFAULT_ECP_PORT = 8060
         private const val DEV_USERNAME = "rokudev"
