@@ -239,7 +239,7 @@ class CdpWebDriver(
         if (point.y >= 0 && point.y.toLong() <= windowHeight) return 0L
 
         val scrolledPixels =
-            executeJS("() => {const delta = ${point.y} - Math.floor(window.innerHeight / 2); window.scrollBy({ top: delta, left: 0, behavior: 'smooth' }); return delta}()") as Int
+            executeJS("(() => {const delta = ${point.y} - Math.floor(window.innerHeight / 2); window.scrollBy({ top: delta, left: 0, behavior: 'smooth' }); return delta})()") as Int
         sleep(3000L)
         return scrolledPixels.toLong()
     }

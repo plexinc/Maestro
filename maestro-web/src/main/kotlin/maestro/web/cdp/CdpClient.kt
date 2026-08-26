@@ -29,6 +29,7 @@ data class CdpTarget(
     val id: String,
     val title: String,
     val url: String,
+    val type: String? = null,
     val webSocketDebuggerUrl: String? = null,
 )
 
@@ -67,15 +68,22 @@ class CdpClient(
      *  1. explicit [targetId] (the CDP target/tile id),
      *  2. a target whose url equals or contains [urlMatch] (e.g. the flow's APP_ID),
      *  3. the first target (legacy launched-Chrome behavior).
+     *
+     * Only `page` targets are considered: Chrome also lists browser_ui, extension and
+     * service_worker targets, and the omnibox popup in particular reports a 1px-high
+     * window, which collapses every bound the driver derives from it.
      */
     suspend fun resolveTarget(targetId: String? = null, urlMatch: String? = null): CdpTarget {
-        val targets = listTargets()
-        if (targets.isEmpty()) error("No CDP targets available at $host:$port")
+        val allTargets = listTargets()
+        if (allTargets.isEmpty()) error("No CDP targets available at $host:$port")
 
         targetId?.let { id ->
-            return targets.firstOrNull { it.id == id }
-                ?: error("No CDP target with id '$id'. Available: ${targets.map { "${it.id} -> ${it.url}" }}")
+            return allTargets.firstOrNull { it.id == id }
+                ?: error("No CDP target with id '$id'. Available: ${allTargets.map { "${it.id} -> ${it.url}" }}")
         }
+
+        // Older Chrome omits `type` on /json; fall back to the full list rather than failing.
+        val targets = allTargets.filter { it.type == "page" }.ifEmpty { allTargets }
 
         urlMatch?.let { u ->
             targets.firstOrNull { it.url == u }?.let { return it }
