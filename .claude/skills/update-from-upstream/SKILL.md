@@ -28,6 +28,7 @@ The fork adds, on top of upstream Maestro:
 | `feat(orchestra): add readFile command and document fork additions` | `readFile` loads a JSON file into a namespaced object variable (`${data.field}`); adds object-typed JS bindings (`JsEngine.putObjectEnv`) via GraalJS proxies. Also introduces `FORK.md`. |
 | `feat(web): Support attaching to a running Chrome/Electron over CDP` | Attach mode (`--cdp-url` / `--cdp-target`) drives an already-running webview instead of launching Chrome; input routed over CDP since there is no Selenium session. |
 | `chore(fork): add verify-fork-stack skill and resync fork docs` | Fork tooling: the `verify-fork-stack` skill plus the `FORK.md` / stack-table reconciliation it enforces. |
+| `feat(roku): add Roku platform support` | `RokuDriver` over the External Control Protocol (HTTP on device port 8060 — no on-device agent), `RokuEcpClient`/`RokuAppUIParser`/`RokuKeyMapping`, device discovery (`MAESTRO_ROKU_HOST` pin or SSDP scan), `DeviceSpec.Roku`, `RokuLocale`, three new remote KeyCodes (`Remote Info`/`Instant Replay`/`Search`, also mapped on Android), Studio TV mode, and the `e2e/roku_demo_app` fixture. D-pad-only: `tapOn` sends `Select`, swipes are repeated D-pad presses. Unsupported primitives (`setLocation`, `setProxy`, `setDarkMode`, `addMedia`, screen recording) throw or no-op deliberately. Contributed by the Nami team. |
 
 This table is the **fork commit stack** — keyed on commit subject, not SHA (rebasing rewrites SHAs, subjects are stable). Keep it in sync with `git log --oneline upstream/main..main`.
 

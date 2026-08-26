@@ -129,6 +129,14 @@ class StartDeviceCommand : Callable<Int> {
                     os = deviceOs ?: default.os,
                 )
             }
+            Platform.ROKU -> {
+                val default = DeviceSpec.Roku.DEFAULT
+                DeviceSpec.Roku(
+                    model = deviceModel ?: default.model,
+                    os = deviceOs ?: default.os,
+                    host = default.host,
+                )
+            }
             Platform.WEB -> {
                 val default = DeviceSpec.Web.DEFAULT
                 DeviceSpec.Web(

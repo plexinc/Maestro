@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MainScene" extends="Scene">
+  <script type="text/brightscript" uri="MainScene.brs" />
+  <children>
+    <HomeScreen id="homeScreen" />
+    <NavigationScreen id="navigationScreen" visible="false" />
+    <TextInputScreen id="textInputScreen" visible="false" />
+    <FocusScreen id="focusScreen" visible="false" />
+  </children>
+</component>

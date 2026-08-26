@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomeScreen" extends="Group">
+  <script type="text/brightscript" uri="HomeScreen.brs" />
+  <interface>
+    <field id="selection" type="string" alwaysNotify="true" />
+    <function name="focusDefault" />
+  </interface>
+  <children>
+    <Label id="titleLabel" text="Home" translation="[100, 60]" />
+    <Button id="menu-navigation" text="Navigation Test" translation="[100, 160]" minWidth="520" />
+    <Button id="menu-text-input" text="Text Input Test" translation="[100, 280]" minWidth="520" />
+    <Button id="menu-focus" text="Focus Test" translation="[100, 400]" minWidth="520" />
+  </children>
+</component>

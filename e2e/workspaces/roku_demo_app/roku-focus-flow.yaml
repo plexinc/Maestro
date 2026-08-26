@@ -1,0 +1,37 @@
+# Mirrors e2e/workspaces/vega_demo_app/vega-focus-flow.yaml, adapted for Roku.
+# Verifies that programmatic focus (setFocus on screen entry) lands on Button 2,
+# not the first button. See roku-navigation-flow.yaml for sideload steps.
+appId: dev
+tags:
+  - roku
+  - passing
+---
+- launchApp
+
+# Open the Focus Test screen.
+- assertVisible: "Home"
+- pressKey: "Remote Dpad Down"
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "menu-focus"
+    focused: true
+- pressKey: "Remote Dpad Center"
+- assertVisible: "Focus Test"
+
+# Programmatic focus should have landed on Button 2.
+- assertVisible:
+    id: "focus-button-2"
+    focused: true
+- assertVisible:
+    id: "focus-button-1"
+    focused: false
+
+# Return Home via the Back button.
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "back-button"
+    focused: true
+- pressKey: "Remote Dpad Center"
+- assertVisible:
+    id: "menu-navigation"
+    focused: true

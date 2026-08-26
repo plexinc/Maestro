@@ -809,6 +809,13 @@ class Maestro(
             return Maestro(driver)
         }
 
+        fun roku(driver: Driver, openDriver: Boolean = true): Maestro {
+            if (openDriver) {
+                driver.open()
+            }
+            return Maestro(driver)
+        }
+
         fun web(
             isStudio: Boolean,
             isHeadless: Boolean,

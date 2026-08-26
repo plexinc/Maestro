@@ -36,6 +36,7 @@ sealed interface DeviceLocale {
         Platform.ANDROID -> AndroidLocale.fromString(localeString)
         Platform.IOS, Platform.TVOS -> IosLocale.fromString(localeString)
         Platform.VEGA -> VegaLocale.fromString(localeString)
+        Platform.ROKU -> RokuLocale.fromString(localeString)
         Platform.WEB -> WebLocale.fromString(localeString)
       }
     }
@@ -60,6 +61,7 @@ sealed interface DeviceLocale {
         Platform.ANDROID -> AndroidLocale.all
         Platform.IOS, Platform.TVOS -> IosLocale.entries
         Platform.VEGA -> VegaLocale.entries
+        Platform.ROKU -> RokuLocale.entries
         Platform.WEB -> WebLocale.entries
       }
     }
@@ -72,6 +74,7 @@ sealed interface DeviceLocale {
         Platform.ANDROID -> AndroidLocale.allCodes
         Platform.IOS, Platform.TVOS -> IosLocale.allCodes
         Platform.VEGA -> VegaLocale.allCodes
+        Platform.ROKU -> RokuLocale.allCodes
         Platform.WEB -> WebLocale.allCodes
       }
     }
@@ -85,6 +88,7 @@ sealed interface DeviceLocale {
         Platform.ANDROID -> AndroidLocale.find(languageCode, countryCode)
         Platform.IOS, Platform.TVOS -> IosLocale.find(languageCode, countryCode)
         Platform.VEGA -> VegaLocale.find(languageCode, countryCode)
+        Platform.ROKU -> RokuLocale.find(languageCode, countryCode)
         Platform.WEB -> WebLocale.find(languageCode, countryCode)
       }
     }
@@ -95,6 +99,7 @@ sealed interface DeviceLocale {
         Platform.ANDROID -> AndroidLocale.fromString("en_US")
         Platform.IOS, Platform.TVOS -> IosLocale.fromString("en_US")
         Platform.VEGA -> VegaLocale.fromString("en_US")
+        Platform.ROKU -> RokuLocale.fromString("en_US")
         Platform.WEB -> WebLocale.fromString("en_US")
       }
     }

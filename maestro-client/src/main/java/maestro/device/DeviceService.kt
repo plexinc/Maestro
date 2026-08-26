@@ -8,6 +8,7 @@ import maestro.device.locale.IosLocale
 import maestro.device.util.PrintUtils
 import maestro.drivers.AndroidDriver
 import maestro.drivers.CdpWebDriver
+import maestro.roku.RokuDeviceDiscovery
 import maestro.vega.VegaCli
 import maestro.utils.MaestroTimer
 import maestro.utils.TempFileHandler
@@ -169,6 +170,19 @@ object DeviceService {
                     deviceSpec = device.deviceSpec,
                 )
             }
+
+            Platform.ROKU -> {
+                // Roku devices are physical network devices; there is nothing to boot.
+                // modelId carries the device host — treat it as connected.
+                PrintUtils.message("Connecting to Roku device at ${device.modelId}...")
+                return Device.Connected(
+                    instanceId = device.modelId,
+                    description = device.description,
+                    platform = device.platform,
+                    deviceType = device.deviceType,
+                    deviceSpec = device.deviceSpec,
+                )
+            }
         }
     }
 
@@ -193,6 +207,7 @@ object DeviceService {
         return listAndroidDevices(host, port) +
                 listAppleDevices() +
                 listVegaDevices() +
+                listRokuDevices() +
                 if (includeWeb) {
                     listWebDevices()
                 } else {
@@ -215,6 +230,30 @@ object DeviceService {
             }
         }.getOrElse {
             logger.warn("Failed to list Vega devices", it)
+            emptyList()
+        }
+    }
+
+    /** Discover Roku devices: the `MAESTRO_ROKU_HOST` pin plus an opt-in SSDP scan
+     * (`MAESTRO_ROKU_DISCOVERY=true`). Best-effort: no configured or responding devices
+     * just yields an empty list rather than failing the whole listing. */
+    fun listRokuDevices(): List<Device> {
+        return runCatching {
+            RokuDeviceDiscovery.discoverDevices().map { roku ->
+                Device.Connected(
+                    instanceId = roku.host,
+                    description = "Roku ${roku.modelName} (${roku.host})",
+                    platform = Platform.ROKU,
+                    deviceType = Device.DeviceType.REAL,
+                    deviceSpec = DeviceSpec.Roku(
+                        model = roku.modelName,
+                        os = "roku-${roku.softwareVersion.ifBlank { "0" }}",
+                        host = roku.host,
+                    ),
+                )
+            }
+        }.getOrElse {
+            logger.warn("Failed to list Roku devices", it)
             emptyList()
         }
     }

@@ -36,6 +36,7 @@ import maestro.cli.report.TestDebugReporter
 import maestro.cli.util.ScreenReporter
 import maestro.drivers.AndroidDriver
 import maestro.drivers.IOSDriver
+import maestro.drivers.RokuDriver
 import maestro.drivers.VegaDriver
 import maestro.vega.VegaDeviceConnection
 import maestro.orchestra.WorkspaceConfig.PlatformConfiguration
@@ -234,6 +235,8 @@ object MaestroSessionManager {
 
                     Platform.VEGA -> createVega(selectedDevice.device.instanceId)
 
+                    Platform.ROKU -> createRoku(selectedDevice.device.instanceId)
+
                     Platform.WEB -> pickWebDevice(isStudio, isHeadless, screenSize, cdpUrl, cdpTarget)
                 },
                 device = selectedDevice.device,
@@ -269,6 +272,11 @@ object MaestroSessionManager {
 
             selectedDevice.platform == Platform.VEGA -> MaestroSession(
                 maestro = createVega(selectedDevice.deviceId ?: error("No Vega device selected")),
+                device = null,
+            )
+
+            selectedDevice.platform == Platform.ROKU -> MaestroSession(
+                maestro = createRoku(selectedDevice.deviceId ?: error("No Roku device selected")),
                 device = null,
             )
 
@@ -482,6 +490,12 @@ object MaestroSessionManager {
     private fun createVega(serial: String): Maestro {
         val connection = VegaDeviceConnection(serial)
         return Maestro.vega(driver = VegaDriver(connection))
+    }
+
+    private fun createRoku(host: String): Maestro {
+        // The driver picks up the dev-mode password (screenshots only) from
+        // MAESTRO_ROKU_PASSWORD; ECP itself is unauthenticated.
+        return Maestro.roku(driver = RokuDriver(host = host))
     }
 
     private data class SelectedDevice(

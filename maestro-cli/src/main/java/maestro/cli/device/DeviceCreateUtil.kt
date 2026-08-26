@@ -33,6 +33,23 @@ object DeviceCreateUtil {
             deviceType = Device.DeviceType.EMULATOR,
             deviceSpec = deviceSpec,
         )
+        // Roku devices are physical network devices; nothing to create or boot.
+        // Resolve the target host so `-p roku` works without a create step.
+        is DeviceSpec.Roku    -> {
+            if (deviceSpec.host.isBlank()) {
+                throw CliError(
+                    "No Roku device configured. Set MAESTRO_ROKU_HOST=<device-ip> " +
+                        "(a Roku in developer mode on the same network) and retry."
+                )
+            }
+            Device.AvailableForLaunch(
+                platform = Platform.ROKU,
+                description = "Roku ${deviceSpec.model} (${deviceSpec.host})",
+                modelId = deviceSpec.host,
+                deviceType = Device.DeviceType.REAL,
+                deviceSpec = deviceSpec,
+            )
+        }
     }
 
     fun getOrCreateAppleDevice(
