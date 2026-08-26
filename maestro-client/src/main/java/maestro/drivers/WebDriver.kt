@@ -616,7 +616,7 @@ class WebDriver(
     }
 
     override fun waitForAppToSettle(initialHierarchy: ViewHierarchy?, appId: String?, timeoutMs: Int?): ViewHierarchy {
-        return ScreenshotUtils.waitForAppToSettle(initialHierarchy, this)
+        return ScreenshotUtils.waitForAppToSettle(initialHierarchy, this, timeoutMs)
     }
 
     override fun waitUntilScreenIsStatic(timeoutMs: Long): Boolean {

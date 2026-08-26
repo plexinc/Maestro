@@ -48,6 +48,12 @@ class Maestro(
     val driver: Driver,
 ) : AutoCloseable {
 
+    // A canvas app (Lightning) keeps mutating the hierarchy while a focus animation runs, so the
+    // default settle polls 10 times and every key press pays for it. pressKey and inputText take no
+    // per-command knob, hence the env override.
+    private val settleTimeoutMsOverride: Int? =
+        System.getenv("MAESTRO_WAIT_TO_SETTLE_TIMEOUT_MS")?.toIntOrNull()
+
     val deviceName: String
         get() = driver.name()
 
@@ -575,7 +581,7 @@ class Maestro(
         appId: String? = null,
         waitToSettleTimeoutMs: Int? = null
     ): ViewHierarchy? = runInterruptible(Dispatchers.IO) {
-        driver.waitForAppToSettle(initialHierarchy, appId, waitToSettleTimeoutMs)
+        driver.waitForAppToSettle(initialHierarchy, appId, waitToSettleTimeoutMs ?: settleTimeoutMsOverride)
     }
 
     suspend fun inputText(text: String) {
