@@ -23,6 +23,7 @@ import java.net.SocketTimeoutException
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -110,7 +111,17 @@ class AdbSocketTimeoutTest {
             val socket = AdbSocketFactory.bounded(target) { _, _ -> parkedReadStream(entered, park) }.createSocket()
             socket.connect(InetSocketAddress("webview_devtools_remote_$n", 9222))
             val input = socket.getInputStream()
-            Thread { runCatching { input.read() } }.apply {
+            Thread {
+                // Idle workers left over from earlier connects still count against the pool cap
+                // until an offer pairs with one, so a submit can be rejected before the pool is
+                // genuinely full. Retry those until this read owns a worker.
+                while (true) {
+                    val outcome = runCatching { input.read() }
+                    val rejected = (outcome.exceptionOrNull() as? IOException)?.cause is RejectedExecutionException
+                    if (!rejected) return@Thread
+                    Thread.sleep(10)
+                }
+            }.apply {
                 isDaemon = true
                 start()
             }
