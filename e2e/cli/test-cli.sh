@@ -29,7 +29,10 @@ check() {          # check <desc> <cmd> <assertion> <expected>
   fi
 }
 
-VERSION=$(grep '^CLI_VERSION=' maestro-cli/gradle.properties | cut -d= -f2)
+# Plex fork: the CLI reports major.minor.patch.build, so the expected version is
+# CLI_VERSION plus the build segment (PLEX_BUILD env wins, as in the publish workflow).
+CLI_VERSION=$(grep '^CLI_VERSION=' maestro-cli/gradle.properties | cut -d= -f2)
+VERSION="$CLI_VERSION.${PLEX_BUILD:-$(grep '^PLEX_BUILD=' maestro-cli/gradle.properties | cut -d= -f2)}"
 
 # TESTS START HERE:
 

@@ -22,8 +22,16 @@ function Check([string]$desc, [string]$cmd, [string]$assertion, [string]$expecte
     }
 }
 
-$version = (Select-String -Path 'maestro-cli/gradle.properties' -Pattern '^CLI_VERSION=').Line `
+# Plex fork: the CLI reports major.minor.patch.build, so the expected version is
+# CLI_VERSION plus the build segment (PLEX_BUILD env wins, as in the publish workflow).
+$cliVersion = (Select-String -Path 'maestro-cli/gradle.properties' -Pattern '^CLI_VERSION=').Line `
     -replace '^CLI_VERSION=', ''
+$plexBuild = $env:PLEX_BUILD
+if (-not $plexBuild) {
+    $plexBuild = (Select-String -Path 'maestro-cli/gradle.properties' -Pattern '^PLEX_BUILD=').Line `
+        -replace '^PLEX_BUILD=', ''
+}
+$version = "$cliVersion.$plexBuild"
 
 # TESTS START HERE:
 
