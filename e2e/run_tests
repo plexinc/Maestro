@@ -22,11 +22,13 @@ platform="${1:-}"
 # platform_args carries whatever that platform needs on every maestro invocation. Web runs
 # headless because CI has no display; the device platforms need nothing.
 case "$platform" in
-	android) exclude_tags="ios,tvos,web,$cloud";     platform_args="" ;;
-	ios)     exclude_tags="android,tvos,$cloud,web"; platform_args="" ;;
-	tvos)    exclude_tags="android,ios,$cloud,web";  platform_args="" ;;
-	web)     exclude_tags="android,ios,tvos,$cloud"; platform_args="--headless" ;;
-	*)       echo "usage: $0 <android|ios|tvos|web>"; exit 1 ;;
+	android) exclude_tags="ios,tvos,vega,roku,web,$cloud";  platform_args="" ;;
+	ios)     exclude_tags="android,tvos,vega,roku,$cloud,web"; platform_args="" ;;
+	tvos)    exclude_tags="android,ios,vega,roku,$cloud,web";  platform_args="" ;;
+	vega)    exclude_tags="android,ios,tvos,roku,$cloud,web";  platform_args="" ;;
+	roku)    exclude_tags="android,ios,tvos,vega,$cloud,web";  platform_args="" ;;
+	web)     exclude_tags="android,ios,tvos,vega,roku,$cloud"; platform_args="--headless" ;;
+	*)       echo "usage: $0 <android|ios|tvos|vega|roku|web>"; exit 1 ;;
 esac
 
 app_filter="${MAESTRO_APP:-}"

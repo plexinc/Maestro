@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 export MAESTRO_CLI_NO_ANALYTICS=1
+# The update banner goes to stderr, which `check` folds into the captured output.
+export MAESTRO_DISABLE_UPDATE_CHECK=true
 PASS=0; FAIL=0
 
 trap 'echo "ERROR: script failed at line $LINENO" >&2' ERR
@@ -29,7 +31,10 @@ check() {          # check <desc> <cmd> <assertion> <expected>
   fi
 }
 
-VERSION=$(grep '^CLI_VERSION=' maestro-cli/gradle.properties | cut -d= -f2)
+# Plex fork: the CLI reports major.minor.patch.build, so the expected version is
+# CLI_VERSION plus the build segment (PLEX_BUILD env wins, as in the publish workflow).
+CLI_VERSION=$(grep '^CLI_VERSION=' maestro-cli/gradle.properties | cut -d= -f2)
+VERSION="$CLI_VERSION.${PLEX_BUILD:-$(grep '^PLEX_BUILD=' maestro-cli/gradle.properties | cut -d= -f2)}"
 
 # TESTS START HERE:
 

@@ -199,9 +199,6 @@ For D-pad-driven or WebGL/canvas web apps (e.g. Lightning). Platform id `WEB`.
   element lookup timeouts, and `MAESTRO_CHROME_BINARY` pins the browser (e.g.
   Chrome for Testing). Blank helper tabs/windows are ignored when picking the
   session's page. (`Maestro.kt`, `Orchestra.kt`, `CdpWebDriver.kt`, PR #4.)
-- **Screen recording in attach mode.** With `--cdp-url`, `startRecording` and the
-  full-run recording capture via CDP `Page.startScreencast` instead of being a
-  silent no-op. (`CdpWebDriver.kt`, `CdpClient.startScreencast`, PR #5.)
 
 ---
 

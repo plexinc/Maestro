@@ -72,24 +72,33 @@ class CdpClient(
      * Resolves a single target to drive, in priority order:
      *  1. explicit [targetId] (the CDP target/tile id),
      *  2. a target whose url equals or contains [urlMatch] (e.g. the flow's APP_ID),
-     *  3. the first page target, else the first target.
+     *  3. the first page target that isn't an empty helper tab.
+     *
+     * Only `page` targets are considered: Chrome also lists browser_ui, extension and
+     * service_worker targets, and the omnibox popup in particular reports a 1px-high
+     * window, which collapses every bound the driver derives from it.
      */
     suspend fun resolveTarget(targetId: String? = null, urlMatch: String? = null): CdpTarget {
-        val targets = listTargets()
-        if (targets.isEmpty()) error("No CDP targets available at $host:$port")
+        val allTargets = listTargets()
+        if (allTargets.isEmpty()) error("No CDP targets available at $host:$port")
 
         targetId?.let { id ->
-            return targets.firstOrNull { it.id == id }
-                ?: error("No CDP target with id '$id'. Available: ${targets.map { "${it.id} -> ${it.url}" }}")
+            return allTargets.firstOrNull { it.id == id }
+                ?: error("No CDP target with id '$id'. Available: ${allTargets.map { "${it.id} -> ${it.url}" }}")
         }
+
+        // Older Chrome omits `type` on /json; fall back to the full list rather than failing.
+        val targets = allTargets.filter { it.type == "page" }.ifEmpty { allTargets }
 
         urlMatch?.let { u ->
             targets.firstOrNull { it.url == u }?.let { return it }
             targets.firstOrNull { it.url.contains(u) }?.let { return it }
         }
 
-        // Chrome also lists browser_ui/service_worker/background_page targets that can't be driven.
-        return targets.firstOrNull { it.type == "page" } ?: targets.first()
+        // A launched Chrome carries an empty helper tab (data:, / about:blank);
+        // driving that strands the whole session on a blank page.
+        return targets.firstOrNull { it.url != "data:," && !it.url.startsWith("about:") }
+            ?: targets.first()
     }
 
     /**
