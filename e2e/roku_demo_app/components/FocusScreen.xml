@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="FocusScreen" extends="Group">
+  <script type="text/brightscript" uri="FocusScreen.brs" />
+  <interface>
+    <field id="done" type="boolean" alwaysNotify="true" />
+  </interface>
+  <children>
+    <Label id="titleLabel" text="Focus Test" translation="[100, 60]" />
+    <Button id="focus-button-1" text="Button 1" translation="[100, 160]" minWidth="480" />
+    <Button id="focus-button-2" text="Button 2" translation="[100, 280]" minWidth="480" />
+    <Button id="back-button" text="Back" translation="[100, 400]" minWidth="480" />
+  </children>
+</component>

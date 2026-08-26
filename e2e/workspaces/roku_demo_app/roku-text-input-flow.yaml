@@ -1,0 +1,31 @@
+# Mirrors e2e/workspaces/vega_demo_app/vega-text-input-flow.yaml, adapted for Roku.
+# The screen focuses a native Keyboard node on entry, so Maestro's inputText
+# (ECP LIT_ keypresses) and eraseText (Backspace) land in it directly — no
+# keyboard-open step needed. See roku-navigation-flow.yaml for sideload steps.
+appId: dev
+tags:
+  - roku
+  - passing
+---
+- launchApp
+
+# Open the Text Input Test screen.
+- assertVisible: "Home"
+- pressKey: "Remote Dpad Down"
+- assertVisible:
+    id: "menu-text-input"
+    focused: true
+- pressKey: "Remote Dpad Center"
+- assertVisible:
+    id: "text-field"
+    focused: true
+
+# Type into the focused keyboard and verify the label echoes it (spaces + capitals).
+- inputText: "Hello Roku"
+- assertVisible: "Typed: Hello Roku"
+
+# Erase and retype. The count is explicit because every character is a separate ECP
+# Backspace keypress: the default of 50 would spend ~5s clearing 10 characters.
+- eraseText: 12
+- inputText: "Maestro Test"
+- assertVisible: "Typed: Maestro Test"

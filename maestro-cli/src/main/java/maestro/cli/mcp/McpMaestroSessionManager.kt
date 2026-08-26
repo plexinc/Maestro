@@ -16,6 +16,7 @@ import maestro.device.Platform
 import maestro.drivers.AndroidDriver
 import maestro.drivers.CdpWebDriver
 import maestro.drivers.IOSDriver
+import maestro.drivers.RokuDriver
 import maestro.drivers.VegaDriver
 import maestro.vega.VegaDeviceConnection
 import maestro.utils.CliInsights
@@ -76,8 +77,19 @@ internal class McpMaestroSessionManager : AutoCloseable {
             Platform.ANDROID -> createAndroidSession(device, streamDeviceType)
             Platform.IOS, Platform.TVOS -> createIosSession(device, streamDeviceType)
             Platform.VEGA -> createVegaSession(device, streamDeviceType)
+            Platform.ROKU -> createRokuSession(device, streamDeviceType)
             Platform.WEB -> createWebSession()
         }
+    }
+
+    private fun createRokuSession(device: Device.Connected, streamDeviceType: StreamDeviceType?): McpMaestroSession {
+        val driver = McpViewerDriver(RokuDriver(host = device.instanceId), "roku")
+        return McpMaestroSession(
+            maestro = Maestro.roku(driver),
+            platform = "roku",
+            streamDeviceType = streamDeviceType,
+            deviceId = device.instanceId,
+        )
     }
 
     private fun createVegaSession(device: Device.Connected, streamDeviceType: StreamDeviceType?): McpMaestroSession {

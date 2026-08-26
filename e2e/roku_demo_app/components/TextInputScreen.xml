@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="TextInputScreen" extends="Group">
+  <script type="text/brightscript" uri="TextInputScreen.brs" />
+  <interface>
+    <field id="done" type="boolean" alwaysNotify="true" />
+  </interface>
+  <children>
+    <Label id="titleLabel" text="Text Input Test" translation="[100, 60]" />
+    <Keyboard id="text-field" translation="[100, 160]" />
+    <Label id="typed-label" text="Typed: " translation="[100, 640]" />
+    <Button id="back-button" text="Back" translation="[100, 720]" minWidth="480" />
+  </children>
+</component>
