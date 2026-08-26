@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 export MAESTRO_CLI_NO_ANALYTICS=1
+# The update banner goes to stderr, which `check` folds into the captured output.
+export MAESTRO_DISABLE_UPDATE_CHECK=true
 PASS=0; FAIL=0
 
 trap 'echo "ERROR: script failed at line $LINENO" >&2' ERR

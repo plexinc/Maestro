@@ -1,4 +1,6 @@
 $env:MAESTRO_CLI_NO_ANALYTICS = 1
+# The update banner goes to stderr, which Check folds into the captured output.
+$env:MAESTRO_DISABLE_UPDATE_CHECK = "true"
 $pass = 0; $fail = 0
 
 function Check([string]$desc, [string]$cmd, [string]$assertion, [string]$expected) {

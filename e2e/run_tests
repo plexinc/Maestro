@@ -20,12 +20,13 @@ _h3() { printf "==> [%s] [%s] => %s\n" "$1" "$2" "$3"; }
 cloud="android_device_configuration,ios_device_configuration" # Maestro Cloud specific tests
 platform="${1:-}"
 case "$platform" in
-	android) exclude_tags="ios,tvos,vega,web,$cloud" ;;
-	ios)     exclude_tags="android,tvos,vega,$cloud,web" ;;
-	tvos)    exclude_tags="android,ios,vega,$cloud,web" ;;
-	vega)    exclude_tags="android,ios,tvos,$cloud,web" ;;
-	web)     exclude_tags="android,ios,tvos,vega,$cloud" ;;
-	*)       echo "usage: $0 <android|ios|tvos|vega|web>"; exit 1 ;;
+	android) exclude_tags="ios,tvos,vega,roku,web,$cloud" ;;
+	ios)     exclude_tags="android,tvos,vega,roku,$cloud,web" ;;
+	tvos)    exclude_tags="android,ios,vega,roku,$cloud,web" ;;
+	vega)    exclude_tags="android,ios,tvos,roku,$cloud,web" ;;
+	roku)    exclude_tags="android,ios,tvos,vega,$cloud,web" ;;
+	web)     exclude_tags="android,ios,tvos,vega,roku,$cloud" ;;
+	*)       echo "usage: $0 <android|ios|tvos|vega|roku|web>"; exit 1 ;;
 esac
 
 app_filter="${MAESTRO_APP:-}"
@@ -132,13 +133,14 @@ elif [ -n "$app_filter" ]; then
 		simple_web_view) [ "$platform" = "android" ] && { echo "skipping $app_name on $platform"; exit 0; } ;;
 		wikipedia)       [ "$platform" = "android" ] && { echo "skipping $app_name on $platform"; exit 0; } ;;
 		vega_demo_app)   [ "$platform" != "vega" ]   && { echo "skipping $app_name on $platform"; exit 0; } ;;
+		roku_demo_app)   [ "$platform" != "roku" ]   && { echo "skipping $app_name on $platform"; exit 0; } ;;
 	esac
 
 	_h1 "run tests for app \"$app_name\" on platform \"$platform\""
 	_run_passing "$app_name" "$workspace_dir"
 
 	case "$app_name" in
-		wikipedia|simple_web_view|vega_demo_app) ;;
+		wikipedia|simple_web_view|vega_demo_app|roku_demo_app) ;;
 		*) _run_failing "$app_name" "$workspace_dir" ;;
 	esac
 else
@@ -152,11 +154,12 @@ else
 			*) app_name="$(basename "$workspace_dir")" ;;
 		esac
 
-		# tvOS and Vega need their own device, so their workspaces only run on that platform.
+		# tvOS, Vega and Roku need their own device, so those workspaces only run on that platform.
 		case $app_name in
 			tvos_settings|tvos_demo_app) [ "$platform" != "tvos" ] && continue ;;
 			vega_demo_app)               [ "$platform" != "vega" ] && continue ;;
-			*)                           case "$platform" in tvos|vega) continue ;; esac ;;
+			roku_demo_app)               [ "$platform" != "roku" ] && continue ;;
+			*)                           case "$platform" in tvos|vega|roku) continue ;; esac ;;
 		esac
 
 		case $app_name in
@@ -170,7 +173,7 @@ else
 		_run_passing "$app_name" "$workspace_dir"
 
 		case "$app_name" in
-			wikipedia|simple_web_view|tvos_settings|tvos_demo_app|vega_demo_app) ;;
+			wikipedia|simple_web_view|tvos_settings|tvos_demo_app|vega_demo_app|roku_demo_app) ;;
 			*) _run_failing "$app_name" "$workspace_dir" ;;
 		esac
 	done
