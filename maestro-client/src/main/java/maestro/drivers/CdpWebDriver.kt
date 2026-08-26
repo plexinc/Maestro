@@ -132,6 +132,8 @@ class CdpWebDriver(
         val driver = ChromeDriver(
             driverService,
             ChromeOptions().apply {
+                // Pin the browser binary (e.g. Chrome for Testing) to match CI.
+                System.getenv("MAESTRO_CHROME_BINARY")?.takeIf { it.isNotBlank() }?.let { setBinary(it) }
                 addArguments("--remote-allow-origins=*")
                 addArguments("--disable-search-engine-choice-screen")
                 addArguments("--lang=en")
@@ -237,7 +239,7 @@ class CdpWebDriver(
         if (point.y >= 0 && point.y.toLong() <= windowHeight) return 0L
 
         val scrolledPixels =
-            executeJS("() => {const delta = ${point.y} - Math.floor(window.innerHeight / 2); window.scrollBy({ top: delta, left: 0, behavior: 'smooth' }); return delta}()") as Int
+            executeJS("(() => {const delta = ${point.y} - Math.floor(window.innerHeight / 2); window.scrollBy({ top: delta, left: 0, behavior: 'smooth' }); return delta})()") as Int
         sleep(3000L)
         return scrolledPixels.toLong()
     }
@@ -295,6 +297,10 @@ class CdpWebDriver(
             val target = resolveTarget()
             cdpClient.openUrl(appId, target)
         }
+
+        // The pre-launch cache may point at the tab we just navigated away from
+        // (or a helper tab); re-resolve against the app URL from here on.
+        resolvedTarget = null
     }
 
     override fun stopApp(appId: String) {
@@ -383,9 +389,18 @@ class CdpWebDriver(
 
             if (newHandles.isNotEmpty()) {
                 val newHandle = newHandles.first()
-                LOGGER.info("Detected a window change, switching to new window handle $newHandle")
 
+                // Newer Chrome can spawn an empty helper window; switching to it
+                // strands the session on a blank page. Only follow real content.
+                val current = driver.windowHandle
                 driver.switchTo().window(newHandle)
+                val url = driver.currentUrl ?: ""
+                if (url.isBlank() || url == "data:," || url.startsWith("about:")) {
+                    LOGGER.info("Ignoring blank new window $newHandle ($url)")
+                    driver.switchTo().window(current)
+                    return
+                }
+                LOGGER.info("Detected a window change, switching to new window handle $newHandle")
 
                 try {
                     webScreenRecorder?.onWindowChange()
@@ -801,7 +816,7 @@ class CdpWebDriver(
     }
 
     override fun waitForAppToSettle(initialHierarchy: ViewHierarchy?, appId: String?, timeoutMs: Int?): ViewHierarchy {
-        return ScreenshotUtils.waitForAppToSettle(initialHierarchy, this)
+        return ScreenshotUtils.waitForAppToSettle(initialHierarchy, this, timeoutMs)
     }
 
     override fun waitUntilScreenIsStatic(timeoutMs: Long): Boolean {

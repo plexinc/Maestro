@@ -134,8 +134,10 @@ class Orchestra(
     private val artifactsDir: Path? = null,
     private val captureFullArtifacts: Boolean = false,
     private val listeners: List<OrchestraListener> = emptyList(),
-    private val lookupTimeoutMs: Long = 17000L,
-    private val optionalLookupTimeoutMs: Long = 7000L,
+    // Env overrides let fast targets (e.g. a local web app) shrink how long a
+    // false `when:` condition or optional lookup blocks before giving up.
+    private val lookupTimeoutMs: Long = System.getenv("MAESTRO_LOOKUP_TIMEOUT_MS")?.toLongOrNull() ?: 17000L,
+    private val optionalLookupTimeoutMs: Long = System.getenv("MAESTRO_OPTIONAL_LOOKUP_TIMEOUT_MS")?.toLongOrNull() ?: 7000L,
     private val httpClient: OkHttpClient? = null,
     private val insights: Insights = NoopInsights,
     private val onFlowStart: (List<MaestroCommand>) -> Unit = {},

@@ -58,11 +58,20 @@ class FlutterWebSemanticsIdentifierTest {
     }
 
     @Test
-    fun `an empty data-testid still yields an empty resource-id (unchanged)`() {
+    fun `an empty data-testid falls through to the next candidate`() {
+        val resourceId = resolveResourceId(
+            id = "native-dom-id",
+            attributes = mapOf("data-testid" to ""),
+        )
+        assertThat(resourceId).isEqualTo("native-dom-id")
+    }
+
+    @Test
+    fun `an empty data-testid with nothing to fall back on gets no resource-id`() {
         val resourceId = resolveResourceId(
             attributes = mapOf("data-testid" to ""),
         )
-        assertThat(resourceId).isEqualTo("")
+        assertThat(resourceId).isNull()
     }
 
     @Test

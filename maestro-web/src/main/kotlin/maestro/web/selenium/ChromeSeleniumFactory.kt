@@ -26,6 +26,8 @@ class ChromeSeleniumFactory(
         return ChromeDriver(
             driverService,
             ChromeOptions().apply {
+                // Pin the browser binary (e.g. Chrome for Testing) to match CI.
+                System.getenv("MAESTRO_CHROME_BINARY")?.takeIf { it.isNotBlank() }?.let { setBinary(it) }
                 addArguments("--remote-allow-origins=*")
                 addArguments("--disable-search-engine-choice-screen")
                 addArguments("--lang=en")

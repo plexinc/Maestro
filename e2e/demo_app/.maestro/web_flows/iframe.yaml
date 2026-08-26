@@ -16,5 +16,5 @@ tags:
 - assertVisible: Potato 
 - tapOn: Echo
 - tapOn:
-    id: echo-output
+    id: iframe-echo-output
     text: Potato
