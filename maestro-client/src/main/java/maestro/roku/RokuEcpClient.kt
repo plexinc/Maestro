@@ -160,7 +160,13 @@ class RokuEcpClient(
             .get()
             .build()
 
-        val response = executeWithRetry(request) ?: return null
+        val response = try {
+            executeWithRetry(request)
+        } catch (e: IOException) {
+            logger.warn("ECP GET query/app-ui failed: {}", e.message)
+            return null
+        }
+
         return try {
             response.body?.string()
         } catch (e: Exception) {
@@ -393,17 +399,18 @@ class RokuEcpClient(
 
     // --- Internal HTTP helpers ---
 
+    /**
+     * Issues a state-changing ECP call (input, launch). Throws on failure: an ECP
+     * command that never reached the device must fail the flow rather than let it
+     * continue asserting against a screen no keypress ever touched.
+     */
     private fun ecpPost(path: String) {
         val request = Request.Builder()
             .url("$baseUrl/$path")
             .post("".toRequestBody("text/plain".toMediaType()))
             .build()
 
-        val response = executeWithRetry(request)
-        if (response == null) {
-            logger.warn("ECP POST to $path failed — no successful response after retries")
-        }
-        response?.close()
+        executeWithRetry(request).close()
     }
 
     private fun ecpGetXml(path: String): Document? {
@@ -412,7 +419,15 @@ class RokuEcpClient(
             .get()
             .build()
 
-        val response = executeWithRetry(request) ?: return null
+        // Queries stay tolerant: callers treat a null document as "hierarchy
+        // unavailable" and poll or report it themselves.
+        val response = try {
+            executeWithRetry(request)
+        } catch (e: IOException) {
+            logger.warn("ECP GET $path failed: {}", e.message)
+            return null
+        }
+
         return try {
             val bytes = response.body?.bytes() ?: return null
             documentBuilderFactory
@@ -426,28 +441,50 @@ class RokuEcpClient(
         }
     }
 
-    private fun executeWithRetry(request: Request): Response? {
-        var lastException: Exception? = null
+    /**
+     * Executes [request], retrying transport failures and 5xx responses. Throws
+     * [RokuEcpException] once the attempts are spent, carrying the HTTP status: OkHttp
+     * returns a [Response] for every status and only throws on transport failures, so a
+     * status the device rejected (403 when ECP access isn't Permissive) is the failure
+     * detail that matters most and must survive into the error.
+     */
+    private fun executeWithRetry(request: Request): Response {
+        var lastFailure: RokuEcpException? = null
 
         for (attempt in 1..maxRetries) {
-            try {
+            val failure = try {
                 val response = client.newCall(request).execute()
                 if (response.isSuccessful) {
                     return response
                 }
+                val code = response.code
                 response.close()
-            } catch (e: Exception) {
-                lastException = e
-                if (attempt < maxRetries) {
-                    logger.debug("ECP request to ${request.url} failed (attempt $attempt/$maxRetries). Retrying.")
-                    Thread.sleep(50)
-                }
+                RokuEcpException("ECP request to ${request.url} failed with HTTP $code.${hintFor(code)}", code)
+            } catch (e: IOException) {
+                RokuEcpException("ECP request to ${request.url} failed: ${e.message}", cause = e)
+            }
+
+            lastFailure = failure
+            // 4xx is the device's verdict on this request — a retry re-sends what it
+            // already rejected, so report it now instead of after three round trips.
+            val code = failure.statusCode
+            if (code != null && code in 400..499) break
+
+            if (attempt < maxRetries) {
+                logger.debug("{} (attempt {}/{}). Retrying.", failure.message, attempt, maxRetries)
+                Thread.sleep(RETRY_BACKOFF_MS)
             }
         }
 
-        logger.warn("ECP request to ${request.url} failed after $maxRetries attempts", lastException)
-        return null
+        throw lastFailure ?: RokuEcpException("ECP request to ${request.url} failed")
     }
+
+    /** HTTP status the device answered with, or null for a transport failure. */
+    class RokuEcpException(
+        message: String,
+        val statusCode: Int? = null,
+        cause: Throwable? = null,
+    ) : IOException(message, cause)
 
     data class ActiveApp(
         val id: String,
@@ -474,6 +511,16 @@ class RokuEcpClient(
 
         const val DEFAULT_ECP_PORT = 8060
         private const val DEV_USERNAME = "rokudev"
+        private const val RETRY_BACKOFF_MS = 50L
+
+        /** Setup advice for the statuses a misconfigured device actually returns. */
+        internal fun hintFor(statusCode: Int): String = when (statusCode) {
+            403 -> " The device is refusing ECP commands: set Settings > System > Advanced system " +
+                "settings > Control by mobile apps > Network access to \"Permissive\"."
+            401 -> " Check the developer-mode password (MAESTRO_ROKU_PASSWORD)."
+            else -> ""
+        }
+
         private val SCREENSHOT_FORMATS = listOf("jpg", "png")
         private const val SCREENSHOT_TIMEOUT_MS = 10_000L
         private const val SCREENSHOT_POLL_INTERVAL_MS = 250L

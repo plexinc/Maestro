@@ -125,7 +125,15 @@ character-by-character `LIT_` keypresses, screenshots via the dev web server
 (digest auth), app launch via `/launch/<channelId>`. Roku is D-pad-only — `tapOn`
 sends `Select` (activates the focused element), swipes/scrolls become repeated
 D-pad presses. `launchApp` is a cold launch: a channel that is already running is
-exited to the home screen first so it restarts from its initial state.
+exited to the home screen first so it restarts from its initial state, and it
+fails the flow if the channel never becomes the active app.
+
+A rejected ECP command fails the flow rather than logging a warning — otherwise a
+device with ECP access set to anything but Permissive serves `/query/app-ui` while
+403-ing every keypress, and a flow passes green having never touched the device.
+The 403 is reported with that setup hint. Nodes the device isn't rendering
+(`visible="false"`, `opacity="0"`) are dropped from the hierarchy with their
+subtrees, so `assertVisible` won't match a hidden element.
 
 **Device setup** (physical hardware only — Roku has no emulator):
 

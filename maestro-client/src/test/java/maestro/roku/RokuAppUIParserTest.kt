@@ -24,6 +24,10 @@ internal class RokuAppUIParserTest {
                   <Button name="button-one" text="Button One" focusable="true" focused="true" bounds="{0, 0, 400, 100}"/>
                   <Button name="button-two" text="Button Two" focusable="true" focused="false" bounds="{0, 120, 400, 100}"/>
                   <Label name="hiddenLabel" text="Hidden" visible="false" bounds="{0, 240, 400, 100}"/>
+                  <Label name="fadedLabel" text="Faded" opacity="0" bounds="{0, 360, 400, 100}"/>
+                </RenderableNode>
+                <RenderableNode name="hiddenKeyboard" subtype="Group" visible="false" bounds="{0, 900, 1920, 180}">
+                  <Button name="keyboard-key-a" text="A" focusable="true" bounds="{0, 0, 100, 100}"/>
                 </RenderableNode>
                 <RowListItem name="row0" bounds="{0, 600, 1920, 300}">
                   <MarkupGrid name="grid0" bounds="{60, 0, 1800, 300}">
@@ -94,10 +98,20 @@ internal class RokuAppUIParserTest {
         assertThat(unfocused.focused).isFalse()
     }
 
+    // ViewHierarchy.isVisible only consults bounds, so an unrendered node left in the
+    // tree would satisfy assertVisible and break assertNotVisible.
     @Test
-    fun `invisible nodes are disabled`() {
+    fun `nodes the device is not rendering are dropped`() {
         val root = parse()
-        assertThat(root.byId("hiddenLabel")!!.enabled).isFalse()
+        assertThat(root.byId("hiddenLabel")).isNull()
+        assertThat(root.byId("fadedLabel")).isNull()
+    }
+
+    @Test
+    fun `an invisible node takes its subtree with it`() {
+        val root = parse()
+        assertThat(root.byId("hiddenKeyboard")).isNull()
+        assertThat(root.byId("keyboard-key-a")).isNull()
     }
 
     @Test

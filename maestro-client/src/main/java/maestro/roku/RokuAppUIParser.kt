@@ -25,7 +25,8 @@ import org.w3c.dom.Node
  *
  * Node `name` attributes (the SceneGraph node ids) become `resource-id`; `bounds` are
  * accumulated with parent `translation` offsets into scene-absolute `[x1,y1][x2,y2]`
- * rects, matching the Android adapter's format.
+ * rects, matching the Android adapter's format. Nodes the device isn't rendering
+ * (`visible="false"` or `opacity="0"`) are dropped along with their subtrees.
  *
  * Reference: roku-test-automation ECP.ts.
  */
@@ -88,6 +89,12 @@ object RokuAppUIParser {
         val opacityStr = element.getAttribute("opacity").ifEmpty { "100" }
         val opacity = opacityStr.toDoubleOrNull()?.div(100) ?: 1.0
 
+        // SceneGraph doesn't render an invisible node or anything beneath it, but ECP
+        // still reports the subtree with real bounds. Maestro's ViewHierarchy.isVisible
+        // only consults bounds, so keeping those nodes would make assertVisible match a
+        // hidden element and assertNotVisible fail on one.
+        if (!visible || opacity <= 0) return null
+
         val translation = parseArray(element.getAttribute("translation"))
         val bounds = parseArray(element.getAttribute("bounds"))
         val text = element.getAttribute("text").ifEmpty { null }
@@ -146,7 +153,7 @@ object RokuAppUIParser {
             attributes = attributes,
             children = children,
             clickable = focusable,
-            enabled = visible && opacity > 0,
+            enabled = true,
             focused = focused,
             checked = null,
             selected = focused,

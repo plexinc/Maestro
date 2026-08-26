@@ -109,8 +109,12 @@ class RokuDriver(
             Thread.sleep(200)
         }
         if (!appActive) {
-            logger.warn("App $appId did not become active within timeout")
-            return
+            // Returning here would leave the flow asserting against whatever screen the
+            // device happens to be showing, failing later with an unrelated message.
+            throw IllegalStateException(
+                "Roku channel $appId did not become the active app within ${LAUNCH_TIMEOUT_MS}ms. " +
+                    "Check the channel id (a sideloaded channel is `dev`) and that the channel is installed."
+            )
         }
 
         // Wait for the app UI to render (a SceneGraph screen with child nodes)
