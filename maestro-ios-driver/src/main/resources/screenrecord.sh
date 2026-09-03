@@ -32,5 +32,18 @@ echo "RECORDING_STARTED"
 # Wait for STDIN to close
 cat
 
-kill -SIGINT "$simctlpid"
+kill -SIGINT "$simctlpid" 2>/dev/null
+
+# simctl sometimes never exits on SIGINT (seen on headless tvOS simulators), which
+# would block the caller forever. Give it time to flush the moov atom, then force it.
+deadline=$((SECONDS + 60))
+while kill -0 "$simctlpid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do
+    sleep 1
+done
+
+if kill -0 "$simctlpid" 2>/dev/null; then
+    echo "RECORDING_STOP_TIMEOUT pid=$simctlpid"
+    kill -KILL "$simctlpid" 2>/dev/null
+fi
+
 wait $simctlpid

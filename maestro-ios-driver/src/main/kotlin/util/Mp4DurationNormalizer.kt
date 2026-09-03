@@ -23,7 +23,7 @@ object Mp4DurationNormalizer {
     fun normalize(recording: File) {
         try {
             RelocateMP4Editor().modifyOrRelocate(recording, HoldLastFrameToMovieDuration)
-        } catch (e: Exception) {
+        } catch (e: Throwable) { // a truncated recording makes jcodec throw errors too, never fail teardown
             logger.warn("Skipping recording duration normalization for ${recording.name}: ${e.message}")
         }
     }

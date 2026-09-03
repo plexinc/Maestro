@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- iOS: don't hang the run forever when a simulator screen recording refuses to stop
+
 ## 2.8.0
 
 - Core: support element-relative `point` on `swipe` commands
