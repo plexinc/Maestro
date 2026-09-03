@@ -22,6 +22,7 @@ import maestro.Maestro
 import maestro.MaestroException
 import maestro.Point
 import maestro.SwipeDirection
+import maestro.utils.ScreenRecordingUnsupported
 import maestro.orchestra.ApplyConfigurationCommand
 import maestro.orchestra.AssertConditionCommand
 import maestro.orchestra.AssertDarkModeCommand
@@ -3035,6 +3036,28 @@ class IntegrationTest {
             )
         )
         assert(File("099_screen_recording.mp4").exists())
+    }
+
+    @Test
+    fun `Case 099 - Screen recording is skipped, not failed, when the platform cannot record`() {
+        // Given
+        val commands = readCommands("099_screen_recording")
+
+        val driver = driver {
+        }
+        driver.screenRecordingError = ScreenRecordingUnsupported("Roku")
+
+        // When
+        Maestro(driver).use {
+            runBlocking {
+                orchestra(it).runFlow(commands)
+            }
+        }
+
+        // Then
+        // The flow still passes, and no empty recording is left behind.
+        driver.assertEvents(emptyList())
+        assert(!File("099_screen_recording.mp4").exists())
     }
 
     @Test

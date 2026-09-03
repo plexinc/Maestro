@@ -10,7 +10,14 @@
 # Also not that the backend currently does not support hvec. That is why the
 # codec is set to h264.
 
-xcrun simctl io "$DEVICE_ID" recordVideo --force --codec h264 "$RECORDING_PATH" >"${RECORDING_PATH}.out" 2>"${RECORDING_PATH}.err" &
+# tvOS only has an "external" display; simctl's default ("internal") records a display
+# that does not exist there, producing no frames and a recorder that ignores SIGINT.
+display_args=()
+if [ -n "$RECORDING_DISPLAY" ]; then
+    display_args=(--display "$RECORDING_DISPLAY")
+fi
+
+xcrun simctl io "$DEVICE_ID" recordVideo --force --codec h264 "${display_args[@]}" "$RECORDING_PATH" >"${RECORDING_PATH}.out" 2>"${RECORDING_PATH}.err" &
 simctlpid=$!
 
 # Wait briefly for simctl to either fail fast or create the file
@@ -32,5 +39,18 @@ echo "RECORDING_STARTED"
 # Wait for STDIN to close
 cat
 
-kill -SIGINT "$simctlpid"
+kill -SIGINT "$simctlpid" 2>/dev/null
+
+# simctl sometimes never exits on SIGINT (seen on headless tvOS simulators), which
+# would block the caller forever. Give it time to flush the moov atom, then force it.
+deadline=$((SECONDS + 60))
+while kill -0 "$simctlpid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do
+    sleep 1
+done
+
+if kill -0 "$simctlpid" 2>/dev/null; then
+    echo "RECORDING_STOP_TIMEOUT pid=$simctlpid"
+    kill -KILL "$simctlpid" 2>/dev/null
+fi
+
 wait $simctlpid

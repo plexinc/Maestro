@@ -303,6 +303,8 @@ internal class ArtifactsGenerator(
             val destFile = collector.allocate(ArtifactKind.SCREEN_RECORDING, ArtifactFormat.MP4, BundleLayout.SCREEN_RECORDING)
             fullRunRecordingFile = destFile
             fullRunRecording = runBlocking { maestro.startScreenRecording(destFile.sink()) }
+        } catch (e: UnsupportedOperationException) {
+            logger.info("Skipping full-run screen recording: ${e.message}")
         } catch (e: Exception) {
             logger.warn("Failed to start full-run screen recording", e)
         }

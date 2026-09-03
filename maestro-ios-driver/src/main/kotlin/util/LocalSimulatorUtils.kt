@@ -13,8 +13,10 @@ import java.io.InputStream
 import java.lang.ProcessBuilder.Redirect.PIPE
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 
 class LocalSimulatorUtils(private val tempFileHandler: TempFileHandler) {
@@ -23,6 +25,9 @@ class LocalSimulatorUtils(private val tempFileHandler: TempFileHandler) {
 
     companion object {
         private const val LOG_DIR_DATE_FORMAT = "yyyy-MM-dd_HHmmss"
+
+        // Backstop for screenrecord.sh's own escalation; the SIGINT flush path is normally fast.
+        private val SCREEN_RECORDING_STOP_TIMEOUT: Duration = Duration.ofMinutes(2)
         private val logger = LoggerFactory.getLogger(LocalSimulatorUtils::class.java)
 
         fun isTV(deviceId: String): Boolean {
@@ -651,12 +656,17 @@ class LocalSimulatorUtils(private val tempFileHandler: TempFileHandler) {
         )
     }
 
+    /** Older simctl rejects display names and IDs, so use the "external"/"internal" aliases. */
+    internal fun displayEnvironment(isTvOS: Boolean): Map<String, String> =
+        if (isTvOS) mapOf("RECORDING_DISPLAY" to "external") else emptyMap()
+
     data class ScreenRecording(
         val process: Process,
         val file: File,
     )
 
-    fun startScreenRecording(deviceId: String): ScreenRecording {
+    /** [isTvOS] selects the display to record; tvOS simulators only expose the external one. */
+    fun startScreenRecording(deviceId: String, isTvOS: Boolean = isTV(deviceId)): ScreenRecording {
         val tempDir = tempFileHandler.createTempDirectory()
         val inputStream = LocalSimulatorUtils::class.java.getResourceAsStream("/screenrecord.sh")
         if (inputStream != null) {
@@ -672,6 +682,7 @@ class LocalSimulatorUtils(private val tempFileHandler: TempFileHandler) {
             val environment = processBuilder.environment()
             environment["DEVICE_ID"] = deviceId
             environment["RECORDING_PATH"] = recording.path
+            environment.putAll(displayEnvironment(isTvOS))
 
             val recordingProcess = processBuilder
                 .redirectInput(PIPE)
@@ -736,11 +747,37 @@ class LocalSimulatorUtils(private val tempFileHandler: TempFileHandler) {
         ).redirectOutput(outputFile).redirectErrorStream(true).start()
     }
 
-    fun stopScreenRecording(screenRecording: ScreenRecording): File {
-        screenRecording.process.outputStream.close()
-        screenRecording.process.waitFor()
+    /**
+     * Stops the recorder and returns the recording. Bounded by [timeout]: a recorder that never
+     * exits (simctl has been seen ignoring the stop signal on headless tvOS simulators) degrades
+     * the recording instead of hanging the whole run.
+     */
+    fun stopScreenRecording(
+        screenRecording: ScreenRecording,
+        timeout: Duration = SCREEN_RECORDING_STOP_TIMEOUT,
+    ): File {
+        runCatching { screenRecording.process.outputStream.close() }
+            .onFailure { logger.warn("Failed to signal the screen recorder to stop: ${it.message}") }
+
+        if (!screenRecording.process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+            logger.warn("Screen recording did not stop within $timeout, force-terminating the recorder")
+            forceTerminate(screenRecording.process)
+        }
+
         // make the media duration match the movie duration so browsers report the real length
-        Mp4DurationNormalizer.normalize(screenRecording.file)
+        if (screenRecording.file.length() > 0) {
+            Mp4DurationNormalizer.normalize(screenRecording.file)
+        }
         return screenRecording.file
+    }
+
+    /** Kills the recorder and its descendants; killing only the script leaves xcrun/simctl orphaned. */
+    private fun forceTerminate(process: Process) {
+        val handle = process.toHandle()
+        // collect before destroying the parent, or the descendants are already reparented
+        val descendants = handle.descendants().toList()
+        (descendants + handle).forEach { runCatching { it.destroyForcibly() } }
+        descendants.forEach { runCatching { it.onExit().orTimeout(5, TimeUnit.SECONDS).join() } }
+        process.waitFor(5, TimeUnit.SECONDS)
     }
 }

@@ -693,10 +693,10 @@ class Maestro(
                 }
             }
         }
-        screenRecordingInProgress = true
-
-        LOGGER.info("Starting screen recording")
+        // only mark it in progress once the driver actually started, or a failure here would
+        // silently no-op every later recording in the session
         val screenRecording = runInterruptible(Dispatchers.IO) { driver.startScreenRecording(out) }
+        screenRecordingInProgress = true
         val startTimestamp = System.currentTimeMillis()
         return object : ScreenRecording {
             override fun close() {

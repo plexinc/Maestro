@@ -21,6 +21,7 @@ import java.nio.file.Files
 class SimctlIOSDevice(
     override val deviceId: String,
     val tempFileHandler: TempFileHandler = TempFileHandler(),
+    isTvOS: Boolean? = null,
 ) : IOSDevice {
 
     companion object {
@@ -30,6 +31,9 @@ class SimctlIOSDevice(
     private val localSimulatorUtils by lazy { LocalSimulatorUtils(tempFileHandler) }
 
     private var screenRecording: LocalSimulatorUtils.ScreenRecording? = null
+
+    // screen recording has to target the external display on tvOS; only look it up if the caller didn't know
+    private val isTvOS: Boolean by lazy { isTvOS ?: LocalSimulatorUtils.isTV(deviceId) }
 
     override fun open() {
         TODO("Not yet implemented")
@@ -116,7 +120,7 @@ class SimctlIOSDevice(
     }
 
     override fun startScreenRecording(out: Sink): IOSScreenRecording {
-        val screenRecording = localSimulatorUtils.startScreenRecording(deviceId)
+        val screenRecording = localSimulatorUtils.startScreenRecording(deviceId, isTvOS)
         this.screenRecording = screenRecording
 
         return object : IOSScreenRecording {
