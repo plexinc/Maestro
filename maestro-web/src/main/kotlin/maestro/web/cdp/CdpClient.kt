@@ -6,6 +6,14 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
@@ -283,6 +291,72 @@ class CdpClient(
             put("clickCount", clickCount)
         }
         sendCommand("Input.dispatchMouseEvent", params, target)
+    }
+
+    /**
+     * Streams screencast frames (JPEG bytes) from [target] to [onFrame] until the returned
+     * handle is closed.
+     *
+     * Runs on its own WebSocket: frames arrive as unsolicited events, which the
+     * request/response [sendCommand] path cannot consume. [onFrame] runs before each frame is
+     * acked, so Chrome's ack-gated delivery doubles as backpressure on the consumer.
+     */
+    suspend fun startScreencast(
+        target: CdpTarget,
+        maxWidth: Int = 1280,
+        maxHeight: Int = 1280,
+        onFrame: (ByteArray) -> Unit,
+    ): AutoCloseable {
+        val wsUrl = target.webSocketDebuggerUrl ?: error("Target ${target.id} has no WebSocket debugger URL")
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val started = CompletableDeferred<Unit>()
+
+        val job = scope.launch {
+            httpClient.webSocketSession { url(wsUrl) }.use { session ->
+                session.send(Frame.Text("""{"id":${idCounter.getAndIncrement()},"method":"Page.enable"}"""))
+                session.send(
+                    Frame.Text(
+                        """{"id":${idCounter.getAndIncrement()},"method":"Page.startScreencast",""" +
+                            """"params":{"format":"jpeg","quality":80,"maxWidth":$maxWidth,""" +
+                            """"maxHeight":$maxHeight,"everyNthFrame":1}}"""
+                    )
+                )
+                started.complete(Unit)
+
+                for (frame in session.incoming) {
+                    if (frame !is Frame.Text) continue
+
+                    val root = json.parseToJsonElement(frame.readText()).jsonObject
+                    if (root["method"]?.jsonPrimitive?.content != "Page.screencastFrame") continue
+
+                    val params = root["params"]?.jsonObject ?: continue
+                    val data = params["data"]?.jsonPrimitive?.content ?: continue
+                    val sessionId = params["sessionId"]?.jsonPrimitive?.content ?: continue
+
+                    onFrame(Base64.getDecoder().decode(data))
+
+                    session.send(
+                        Frame.Text(
+                            """{"id":${idCounter.getAndIncrement()},"method":"Page.screencastFrameAck",""" +
+                                """"params":{"sessionId":$sessionId}}"""
+                        )
+                    )
+                }
+            }
+        }
+
+        // Surface a connect/start failure to the caller instead of hanging on `started`.
+        job.invokeOnCompletion { cause ->
+            if (cause != null) started.completeExceptionally(cause) else started.complete(Unit)
+        }
+        started.await()
+
+        return AutoCloseable {
+            // Join before returning: the caller closes its encoder next, and that must not
+            // race a frame still inside onFrame. Dropping the socket ends the screencast.
+            runBlocking { job.cancelAndJoin() }
+            scope.cancel()
+        }
     }
 
     private suspend fun sendCommand(method: String, params: JsonObject, target: CdpTarget): String {
