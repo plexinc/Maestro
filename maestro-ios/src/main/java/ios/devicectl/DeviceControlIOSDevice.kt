@@ -1,5 +1,6 @@
 package ios.devicectl
 
+import maestro.utils.ScreenRecordingUnsupported
 import com.github.michaelbull.result.Result
 import device.IOSDevice
 import device.IOSScreenRecording
@@ -84,7 +85,8 @@ class DeviceControlIOSDevice(override val deviceId: String) : IOSDevice {
     }
 
     override fun startScreenRecording(out: Sink): IOSScreenRecording {
-        TODO("Not yet implemented")
+        // devicectl exposes no capture API; only the simulator (simctl) can record.
+        throw ScreenRecordingUnsupported("physical iOS devices, only on simulators")
     }
 
     override fun setLocation(latitude: Double, longitude: Double): Result<Unit, Throwable> {

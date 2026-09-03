@@ -66,6 +66,9 @@ open class FakeDriver : Driver {
     // Test seam: when set, launchApp() throws this — used to simulate a device death during setup.
     var launchError: Throwable? = null
 
+    // Test seam: when set, startScreenRecording() throws this — used to simulate a platform that cannot record.
+    var screenRecordingError: Throwable? = null
+
     override fun name(): String {
         return "Fake Device"
     }
@@ -269,6 +272,8 @@ open class FakeDriver : Driver {
 
     override fun startScreenRecording(out: Sink): ScreenRecording {
         ensureOpen()
+
+        screenRecordingError?.let { throw it }
 
         out.buffer().writeUtf8("Screen recording").close()
 

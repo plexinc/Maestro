@@ -150,7 +150,13 @@ class RecordCommand : Callable<Int> {
                 val resultView = AnsiResultView()
                 val screenRecording = kotlin.io.path.createTempFile(suffix = ".mp4").toFile()
                 val exitCode = screenRecording.sink().use { out ->
-                    runBlocking { maestro.startScreenRecording(out) }.use {
+                    val recording = try {
+                        runBlocking { maestro.startScreenRecording(out) }
+                    } catch (e: UnsupportedOperationException) {
+                        // recording is the entire point of this command, so don't degrade
+                        throw CliError("\"maestro record\" needs a device that can record video: ${e.message}")
+                    }
+                    recording.use {
                         TestRunner.runSingle(
                             maestro,
                             device,
