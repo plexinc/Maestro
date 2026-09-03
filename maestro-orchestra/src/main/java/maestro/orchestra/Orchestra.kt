@@ -1310,9 +1310,15 @@ class Orchestra(
         val outFile = artifactsGenerator
             .allocateCommandArtifact(ArtifactKind.START_SCREEN_RECORDING, "${command.path}.mp4", "startRecording")
             ?: File("${command.path}.mp4")
-        // Null when a recording is already running (this flow's, or the full-run one).
-        maestro.startScreenRecordingInto(artifactSink(outFile, command.path, "startRecording"), outFile)
-            ?.let { screenRecording = it }
+        try {
+            // Null when a recording is already running (this flow's, or the full-run one).
+            maestro.startScreenRecordingInto(artifactSink(outFile, command.path, "startRecording"), outFile)
+                ?.let { screenRecording = it }
+        } catch (e: UnsupportedOperationException) {
+            // recording is incidental to the flow, so skip it rather than failing the run
+            logger.warn("Skipping startRecording: ${e.message}")
+            insights.report(Insight("Skipping startRecording: ${e.message}", Insight.Level.WARNING))
+        }
         return false
     }
 

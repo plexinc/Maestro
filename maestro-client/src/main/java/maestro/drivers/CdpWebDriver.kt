@@ -75,6 +75,7 @@ class CdpWebDriver(
     private var injectedArguments: Map<String, Any> = emptyMap()
 
     private var webScreenRecorder: WebScreenRecorder? = null
+    private var cdpScreenRecording: ScreenRecording? = null
 
     private val isAttachMode: Boolean get() = cdpUrl != null
 
@@ -298,6 +299,7 @@ class CdpWebDriver(
         try {
             seleniumDriver?.quit()
             webScreenRecorder?.close()
+            cdpScreenRecording?.close()
         } catch (e: Exception) {
             // Swallow the exception to avoid crashing the whole process
         }
@@ -305,6 +307,7 @@ class CdpWebDriver(
         seleniumDriver = null
         lastSeenWindowHandles = setOf()
         webScreenRecorder = null
+        cdpScreenRecording = null
     }
 
     override fun deviceInfo(): DeviceInfo {
@@ -806,11 +809,47 @@ class CdpWebDriver(
 
     override fun startScreenRecording(out: Sink): ScreenRecording {
         if (isAttachMode) {
-            // WebScreenRecorder is Selenium-backed; unavailable when attached over CDP.
-            return object : ScreenRecording {
-                override val startedAt: Instant = Instant.now()
-                override fun close() {}
+            // WebScreenRecorder is Selenium-backed, so attach mode drives the screencast
+            // over the raw CDP socket instead and feeds the frames to the same encoder.
+            val encoder = JcodecVideoEncoder()
+            encoder.start(out)
+            val startedAt = Instant.now()
+            fun elapsedMs() = System.currentTimeMillis() - startedAt.toEpochMilli()
+
+            val screencast = try {
+                runBlocking {
+                    cdpClient.startScreencast(resolveTarget()) { frame ->
+                        // Stamped on arrival; a frame that fails to encode is dropped, not fatal.
+                        val atMs = elapsedMs()
+                        runCatching { encoder.encodeFrame(frame, atMs) }
+                            .onFailure { LOGGER.warn("Failed to encode screencast frame", it) }
+                    }
+                }
+            } catch (e: Exception) {
+                runCatching { encoder.finish(endMs = 0) }
+                throw e
             }
+
+            val recording = object : ScreenRecording {
+                override val startedAt: Instant = startedAt
+                private var closed = false
+
+                override fun close() {
+                    // Also reached via the driver's own close(); finishing the encoder twice throws.
+                    if (closed) return
+                    closed = true
+
+                    // Order matters: the screencast join guarantees no frame is mid-encode.
+                    try {
+                        screencast.close()
+                    } finally {
+                        encoder.finish(endMs = elapsedMs())
+                    }
+                }
+            }
+            cdpScreenRecording = recording
+
+            return recording
         }
 
         val driver = ensureOpen()

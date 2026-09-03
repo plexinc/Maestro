@@ -1,5 +1,6 @@
 package maestro.drivers
 
+import maestro.utils.ScreenRecordingUnsupported
 import maestro.Capability
 import maestro.DeviceInfo
 import maestro.Driver
@@ -163,7 +164,7 @@ class VegaDriver(
     }
 
     override fun startScreenRecording(out: Sink): ScreenRecording {
-        throw UnsupportedOperationException("Screen recording is not supported on Vega")
+        throw ScreenRecordingUnsupported("Vega")
     }
 
     override fun setLocation(latitude: Double, longitude: Double) {

@@ -23,6 +23,8 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
 
     testImplementation(libs.junit.jupiter.api)
+    testImplementation(libs.ktor.server.cio)
+    testImplementation(libs.ktor.server.websockets)
     testImplementation(libs.google.truth)
     testImplementation(libs.mockk)
     testRuntimeOnly(libs.junit.jupiter.engine)

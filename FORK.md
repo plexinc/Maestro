@@ -103,6 +103,12 @@ maestro test --platform tvos flow.yaml
 Includes a tvOS RN/Expo demo app and e2e flows under `e2e/tvos_demo_app/` and
 `e2e/workspaces/tvos_*`. Commit `83da4ec4`.
 
+Screen recordings on tvOS simulators record the `external` display (tvOS has no
+`internal` one), and a recorder that ignores the stop signal is force-killed
+after a timeout instead of hanging the run. Platforms that can't record
+(Vega, Roku, physical iOS) raise `ScreenRecordingUnsupported`: flows skip the
+recording with a warning, `maestro record` fails clearly. (PR #5.)
+
 ### Amazon Vega / Fire TV
 
 Driver for Amazon's Vega OS (a Linux/React Native OS — **not** Android).
@@ -199,6 +205,9 @@ For D-pad-driven or WebGL/canvas web apps (e.g. Lightning). Platform id `WEB`.
   element lookup timeouts, and `MAESTRO_CHROME_BINARY` pins the browser (e.g.
   Chrome for Testing). Blank helper tabs/windows are ignored when picking the
   session's page. (`Maestro.kt`, `Orchestra.kt`, `CdpWebDriver.kt`, PR #4.)
+- **Screen recording in attach mode.** With `--cdp-url`, `startRecording` and the
+  full-run recording capture via CDP `Page.startScreencast` instead of being a
+  silent no-op. (`CdpWebDriver.kt`, `CdpClient.startScreencast`, PR #5.)
 
 ---
 

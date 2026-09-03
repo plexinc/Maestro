@@ -1,5 +1,6 @@
 package ios.xctest
 
+import maestro.utils.ScreenRecordingUnsupported
 import com.github.michaelbull.result.Result
 import device.IOSDevice
 import hierarchy.ViewHierarchy
@@ -170,7 +171,7 @@ class XCTestIOSDevice(
     }
 
     override fun startScreenRecording(out: Sink): IOSScreenRecording {
-        error("Not supported")
+        throw ScreenRecordingUnsupported("iOS devices driven over XCTest")
     }
 
     override fun setLocation(latitude: Double, longitude: Double): Result<Unit, Throwable> {

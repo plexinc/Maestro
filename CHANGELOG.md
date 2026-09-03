@@ -4,6 +4,11 @@
 
 - Core: report invalid `index`/`point`/scroll `speed` values as test errors instead of infra errors
 - Core: **Breaking** — reject out-of-range scroll `speed` (must be 0–100), out-of-range literal percent points, and negative literal point coordinates, instead of silently falling back to the default
+- Core: skip `startRecording` with a warning on platforms that cannot record, instead of failing the flow or leaving a 0-byte file
+- iOS: record the external display on tvOS simulators, where screen recordings were never captured
+- iOS: don't hang the run forever when a simulator screen recording refuses to stop
+- iOS: report screen recording as unsupported on physical devices instead of crashing with `TODO()`
+- Web: record the screen over CDP when attached to a running Chrome/Electron, where recording used to be a silent no-op
 
 ## 2.11.0
 

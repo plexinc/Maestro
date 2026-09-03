@@ -348,6 +348,8 @@ internal class ArtifactsGenerator(
                 BundleLayout.SCREEN_RECORDING,
                 mapOf(ArtifactEntry.METADATA_STARTED_AT_EPOCH_MS to recording.startedAt.toEpochMilli().toString()),
             )
+        } catch (e: UnsupportedOperationException) {
+            logger.info("Skipping full-run screen recording: ${e.message}")
         } catch (e: Exception) {
             logger.warn("Failed to start full-run screen recording", e)
         }
