@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- iOS: record the external display on tvOS simulators, where screen recordings were never captured
 - iOS: don't hang the run forever when a simulator screen recording refuses to stop
 
 ## 2.8.0

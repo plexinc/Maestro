@@ -390,6 +390,7 @@ object MaestroSessionManager {
                 throw UnsupportedOperationException("Unsupported device type $deviceType for iOS platform")
             }
         }
+        val isTvOS = deviceType == Device.DeviceType.SIMULATOR && LocalSimulatorUtils.isTV(deviceId)
         val iOSDriverConfig = when (deviceType) {
             Device.DeviceType.REAL -> {
                 val maestroDirectory = Paths.get(System.getProperty("user.home"), ".maestro")
@@ -403,7 +404,7 @@ object MaestroSessionManager {
                 )
             }
             Device.DeviceType.SIMULATOR -> {
-                val sourceDirectory = if (LocalSimulatorUtils.isTV(deviceId)) {
+                val sourceDirectory = if (isTvOS) {
                     "driver-appletvSimulator"
                 } else {
                     "driver-iPhoneSimulator"
@@ -428,7 +429,8 @@ object MaestroSessionManager {
             Device.DeviceType.SIMULATOR -> {
                 val simctlIOSDevice = SimctlIOSDevice(
                     deviceId = deviceId,
-                    tempFileHandler = tempFileHandler
+                    tempFileHandler = tempFileHandler,
+                    isTvOS = isTvOS,
                 )
                 simctlIOSDevice
             }

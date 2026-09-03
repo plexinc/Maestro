@@ -656,12 +656,17 @@ class LocalSimulatorUtils(private val tempFileHandler: TempFileHandler) {
         )
     }
 
+    /** Older simctl rejects display names and IDs, so use the "external"/"internal" aliases. */
+    internal fun displayEnvironment(isTvOS: Boolean): Map<String, String> =
+        if (isTvOS) mapOf("RECORDING_DISPLAY" to "external") else emptyMap()
+
     data class ScreenRecording(
         val process: Process,
         val file: File,
     )
 
-    fun startScreenRecording(deviceId: String): ScreenRecording {
+    /** [isTvOS] selects the display to record; tvOS simulators only expose the external one. */
+    fun startScreenRecording(deviceId: String, isTvOS: Boolean = isTV(deviceId)): ScreenRecording {
         val tempDir = tempFileHandler.createTempDirectory()
         val inputStream = LocalSimulatorUtils::class.java.getResourceAsStream("/screenrecord.sh")
         if (inputStream != null) {
@@ -677,6 +682,7 @@ class LocalSimulatorUtils(private val tempFileHandler: TempFileHandler) {
             val environment = processBuilder.environment()
             environment["DEVICE_ID"] = deviceId
             environment["RECORDING_PATH"] = recording.path
+            environment.putAll(displayEnvironment(isTvOS))
 
             val recordingProcess = processBuilder
                 .redirectInput(PIPE)

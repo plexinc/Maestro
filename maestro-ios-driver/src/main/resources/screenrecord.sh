@@ -10,7 +10,14 @@
 # Also not that the backend currently does not support hvec. That is why the
 # codec is set to h264.
 
-xcrun simctl io "$DEVICE_ID" recordVideo --force --codec h264 "$RECORDING_PATH" >"${RECORDING_PATH}.out" 2>"${RECORDING_PATH}.err" &
+# tvOS only has an "external" display; simctl's default ("internal") records a display
+# that does not exist there, producing no frames and a recorder that ignores SIGINT.
+display_args=()
+if [ -n "$RECORDING_DISPLAY" ]; then
+    display_args=(--display "$RECORDING_DISPLAY")
+fi
+
+xcrun simctl io "$DEVICE_ID" recordVideo --force --codec h264 "${display_args[@]}" "$RECORDING_PATH" >"${RECORDING_PATH}.out" 2>"${RECORDING_PATH}.err" &
 simctlpid=$!
 
 # Wait briefly for simctl to either fail fast or create the file
