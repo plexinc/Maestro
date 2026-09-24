@@ -1553,7 +1553,7 @@ class IntegrationTest {
         val driver = driver {
             val indicator = element {
                 text = "Not Clicked"
-                bounds = Bounds(0, 100, 0, 200)
+                bounds = Bounds(0, 100, 100, 200)
             }
 
             element {
@@ -2285,7 +2285,7 @@ class IntegrationTest {
 
             val counterView = element {
                 text = "Value 0"
-                bounds = Bounds(0, 100, 100, 100)
+                bounds = Bounds(0, 100, 100, 200)
             }
 
             element {
@@ -2537,7 +2537,7 @@ class IntegrationTest {
 
             val counterView = element {
                 text = "Value 0"
-                bounds = Bounds(0, 100, 100, 100)
+                bounds = Bounds(0, 100, 100, 200)
             }
 
             element {
