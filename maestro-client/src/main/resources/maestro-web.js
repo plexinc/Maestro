@@ -260,7 +260,12 @@
                         segs.unshift(domElement.localName.toLowerCase() + '[@id="' + domElement.getAttribute('id') + '"]');
                     }
             } else if (domElement.hasAttribute('class')) {
-                segs.unshift(domElement.localName.toLowerCase() + '[@class="' + domElement.getAttribute('class') + '"]');
+                // Siblings often share a class string (atomic CSS), so pin the position among them
+                var cls = domElement.getAttribute('class');
+                for (var ci = 1, csib = domElement.previousSibling; csib; csib = csib.previousSibling) {
+                    if (csib.nodeType == 1 && csib.localName == domElement.localName && csib.getAttribute('class') == cls) ci++;
+                }
+                segs.unshift(domElement.localName.toLowerCase() + '[@class="' + cls + '"][' + ci + ']');
             } else {
                 for (i = 1, sib = domElement.previousSibling; sib; sib = sib.previousSibling) {
                     if (sib.localName == domElement.localName)  i++; }

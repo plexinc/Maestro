@@ -32,6 +32,7 @@ The fork adds, on top of upstream Maestro:
 | `fix(web): honour the settle timeout, pin Chrome, keep the session on the app tab (#4)` | Env knobs `MAESTRO_WAIT_TO_SETTLE_TIMEOUT_MS`, `MAESTRO_LOOKUP_TIMEOUT_MS`, `MAESTRO_OPTIONAL_LOOKUP_TIMEOUT_MS`; `MAESTRO_CHROME_BINARY` pins Chrome; ignores blank helper tabs/windows; web drivers honour `waitToSettleTimeoutMs`. |
 | `fix: capture screen recordings on tvOS and in CDP attach mode (#5)` | tvOS simulator recordings use `--display external`; bounded recorder teardown (`screenrecord.sh` + `LocalSimulatorUtils`); CDP-screencast recording in attach mode; `ScreenRecordingUnsupported` lets flows skip recording on platforms that can't. Overlaps upstream #3632's recording-start work — on conflict keep upstream's `startedAt`/`startScreenRecordingInto` and layer ours on top. |
 | `fix: treat an element with no area as not visible (#6)` | `UiElement.getVisiblePercentage` returns 0 for a zero-width *or* zero-height box (was NaN, which kept collapsed elements "visible"). Upstreamable. |
+| `fix(web): send keys to the focused element, not its first same-class sibling` | `maestro-web.js` XPath generation disambiguates same-class siblings so key input reaches the actually focused element. |
 
 This table is the **fork commit stack** — keyed on commit subject, not SHA (rebasing rewrites SHAs, subjects are stable). Keep it in sync with `git log --oneline upstream/main..main`.
 
