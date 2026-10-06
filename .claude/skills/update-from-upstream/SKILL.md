@@ -15,6 +15,7 @@ The fork adds, on top of upstream Maestro:
 |----------------|---------|
 | `chore: setup Plex fork` | `major.minor.patch.build` versioning (`CLI_VERSION` tracks upstream; the fork-owned `PLEX_BUILD` adds a 4th segment, auto-incremented at release by `publish-cli`); update-check/changelog/install resolve straight from `plexinc/Maestro` GitHub Releases; `uninstall.sh`. Fork-only. |
 | `feat(tvos): add apple tv support` | Apple TV (tvOS) driver, device handling, RN Expo tvOS demo app, and tvOS e2e flows. |
+| `feat(ios): run flows on a physical iPhone` | Packs `MaestroDriverLib` for the device driver build; `launchApp` through `devicectl`; `openLink` through a new `openUrl` driver route. |
 | `fix(web): prefer data-testid for element selection` | Web driver selects by `data-testid` first for stabler Lightning/WebGL selection. |
 | `feat(web): expand web driver keyboard support` | Maps `REMOTE_DPAD` keycodes (arrows + center) to Selenium arrow keys. |
 | `feat(web): detect web flows from a URL-shaped appId` | `FileUtils.isWebFlow()` treats an `http(s)://` `appId` as a web target. |

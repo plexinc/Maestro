@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1B2C3D40000000000000002 /* OpenUrlHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000001 /* OpenUrlHandler.swift */; };
+		A1B2C3D40000000000000003 /* OpenUrlHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000001 /* OpenUrlHandler.swift */; };
 		320979632970925500340282 /* InputTextRouteHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 320979622970925500340282 /* InputTextRouteHandler.swift */; };
 		32097965297092A800340282 /* InputTextRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32097964297092A800340282 /* InputTextRequest.swift */; };
 		32762AF82965E2A200FB69BD /* SwipeRouteHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32762AF72965E2A200FB69BD /* SwipeRouteHandler.swift */; };
@@ -286,6 +288,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1B2C3D40000000000000001 /* OpenUrlHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenUrlHandler.swift; sourceTree = "<group>"; };
 		320979622970925500340282 /* InputTextRouteHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputTextRouteHandler.swift; sourceTree = "<group>"; };
 		32097964297092A800340282 /* InputTextRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputTextRequest.swift; sourceTree = "<group>"; };
 		32762AF72965E2A200FB69BD /* SwipeRouteHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeRouteHandler.swift; sourceTree = "<group>"; };
@@ -847,6 +850,7 @@
 			isa = PBXGroup;
 			children = (
 				521C1F112D86CE8A0024EE42 /* TerminateAppHandler.swift */,
+				A1B2C3D40000000000000001 /* OpenUrlHandler.swift */,
 				32A9C73B2D7A62AF00545435 /* LaunchAppHandler.swift */,
 				610D58F82A45B5DA00B4BBEB /* ViewHierarchyHandler.swift */,
 				943A9087293F5EAA00C85136 /* RunningAppRouteHandler.swift */,
@@ -1268,6 +1272,7 @@
 				52F0B1B32B3C26DF00C6471A /* KeyboardHandlerRequest.swift in Sources */,
 				612DE4122984114B003C2BE0 /* RunnerDaemonProxy.swift in Sources */,
 				61C0AFEB29C863BB005D1FC5 /* PressButtonHandler.swift in Sources */,
+				A1B2C3D40000000000000002 /* OpenUrlHandler.swift in Sources */,
 				94826F4429DB082100795E9B /* SystemPermissionHelper.swift in Sources */,
 				52D8FAAC2D6DD3A20015FAB3 /* FBLogger.m in Sources */,
 				612432A02A4DA72F00F5F619 /* Logger.swift in Sources */,
@@ -1375,6 +1380,7 @@
 				D9D3F0752F49FD9C004A960A /* KeyboardHandlerRequest.swift in Sources */,
 				D9D3F0762F49FD9C004A960A /* RunnerDaemonProxy.swift in Sources */,
 				D9D3F0772F49FD9C004A960A /* PressButtonHandler.swift in Sources */,
+				A1B2C3D40000000000000003 /* OpenUrlHandler.swift in Sources */,
 				D9D3F0782F49FD9C004A960A /* SystemPermissionHelper.swift in Sources */,
 				D9D3F0792F49FD9C004A960A /* FBLogger.m in Sources */,
 				D9D3F07A2F49FD9C004A960A /* Logger.swift in Sources */,

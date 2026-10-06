@@ -103,6 +103,33 @@ maestro test --platform tvos flow.yaml
 Includes a tvOS RN/Expo demo app and e2e flows under `e2e/tvos_demo_app/` and
 `e2e/workspaces/tvos_*`. Commit `a220b2a0`.
 
+### Physical iPhones
+
+Flows run on a physical iPhone connected over USB, through `devicectl` and the
+XCTest driver built for the device.
+
+```bash
+maestro --udid <device udid> test --apple-team-id <team id> \
+  --driver-host-port 22187 flow.yaml
+```
+
+- The CLI jar packs `MaestroDriverLib`, which the device driver build needs.
+- `launchApp` starts the app with `xcrun devicectl device process launch`.
+  `stopApp: true` stops it through the driver first.
+- `openLink` opens the URL through the driver (`XCUIDevice.shared.system.open`,
+  iOS 16.4+), as a tapped link does. The app gets it whether it is running or
+  not.
+- The driver listens on the device's loopback. Forward its port from the Mac,
+  for example with `iproxy <port>:<port> -u <udid>` from libimobiledevice, and
+  pin it with `--driver-host-port`. Start the forward after Maestro starts,
+  because Maestro first checks that the port is free.
+- `clearState`, `clearKeychain`, `setLocation`, `addMedia` and `installApp`
+  are not supported on a physical device yet.
+
+Code: `DeviceControlIOSDevice.launch`, `LocalIOSDevice.openLink`,
+`XCTestIOSDevice.openLink`, `OpenUrlHandler.swift`, and the `MaestroDriverLib`
+include in `maestro-cli/build.gradle.kts`.
+
 ### Amazon Vega / Fire TV
 
 Driver for Amazon's Vega OS (a Linux/React Native OS — **not** Android).

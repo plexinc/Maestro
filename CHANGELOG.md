@@ -7,6 +7,8 @@
 - iOS: record the external display on tvOS simulators, where screen recordings were never captured
 - iOS: don't hang the run forever when a simulator screen recording refuses to stop
 - iOS: report screen recording as unsupported on physical devices instead of crashing with `TODO()`
+- iOS: build the physical-device driver, which failed without `MaestroDriverLib` in the CLI jar
+- iOS: launch apps and open links on a physical iPhone, which crashed with `TODO()`
 - Web: record the screen over CDP when attached to a running Chrome/Electron, where recording used to be a silent no-op
 
 ## 2.8.0
