@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- iOS: follow the foreground app's orientation, so an app locked to landscape on an upright device keeps its elements in the hierarchy instead of losing everything past the portrait width
 - Core: skip `startRecording` with a warning on platforms that cannot record, instead of failing the flow or leaving a 0-byte file
 - Core: don't let a failed screen recording start silently disable every later recording in the session
 - iOS: record the external display on tvOS simulators, where screen recordings were never captured
