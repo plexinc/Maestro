@@ -33,6 +33,7 @@ The fork adds, on top of upstream Maestro:
 | `fix: capture screen recordings on tvOS and in CDP attach mode (#5)` | tvOS simulator recordings use `--display external`; bounded recorder teardown (`screenrecord.sh` + `LocalSimulatorUtils`); CDP-screencast recording in attach mode; `ScreenRecordingUnsupported` lets flows skip recording on platforms that can't. Overlaps upstream #3632's recording-start work — on conflict keep upstream's `startedAt`/`startScreenRecordingInto` and layer ours on top. |
 | `fix: treat an element with no area as not visible (#6)` | `UiElement.getVisiblePercentage` returns 0 for a zero-width *or* zero-height box (was NaN, which kept collapsed elements "visible"). Upstreamable. |
 | `fix(web): send keys to the focused element, not its first same-class sibling` | `maestro-web.js` XPath generation disambiguates same-class siblings so key input reaches the actually focused element. |
+| `ci: notify Slack when the CLI is published (#10)` | `publish-cli` posts tag, release/run links, and changes since the previous `cli-*` release to Slack (`SLACK_CHANNEL`, `SLACK_BOT_TOKEN`; skipped when unset, `continue-on-error`). Also guards upstream's `notify-release-comms.yml` to `mobile-dev-inc/maestro`. |
 
 This table is the **fork commit stack** — keyed on commit subject, not SHA (rebasing rewrites SHAs, subjects are stable). Keep it in sync with `git log --oneline upstream/main..main`.
 
@@ -77,6 +78,7 @@ This table is the **fork commit stack** — keyed on commit subject, not SHA (re
    - **`maestro-cli/gradle.properties`** — keep the `PLEX_BUILD` line; take upstream's `CLI_VERSION` bump.
    - **`maestro-cli/build.gradle.kts`** — keep the `FULL_CLI_VERSION`/`PLEX_BUILD` wiring and the `plexinc/Maestro` jreleaser release block.
    - **`maestro-cli/src/main/java/maestro/cli/api/ApiClient.kt`** — keep `CliVersion`'s `build` segment / `baseVersion` / 4-part parsing.
+   - **`.github/workflows/notify-release-comms.yml`** — keep the `github.repository == 'mobile-dev-inc/maestro'` guard on top of whatever `if:` upstream has.
    - **`mapToSeleniumKey()`** and focus handling in `WebDriver.kt` / `CdpWebDriver.kt` — keep the `REMOTE_DPAD` branches and the `focused` wiring.
 
    After resolving each step: `git add <files> && git rebase --continue`. Abort with `git rebase --abort` (then `git reset --hard fork-backup`) if it goes sideways.

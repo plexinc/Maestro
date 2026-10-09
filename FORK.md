@@ -245,6 +245,17 @@ curl -fsSL "https://raw.githubusercontent.com/plexinc/Maestro/main/scripts/unins
 Code: `scripts/install.sh`, `scripts/uninstall.sh`, `Updates.kt`, `ApiClient.kt`,
 `EnvUtils.kt`. Commit `69cf1d18`.
 
+### Slack release notification
+
+After a successful `publish-cli` run, a message with the release tag, links to
+the GitHub Release and workflow run, and the commit subjects since the previous
+`cli-*` release is posted to `#project-automated-testing` (workflow-level
+`SLACK_CHANNEL` env). Needs the `SLACK_BOT_TOKEN` secret ("Plex - Github
+Actions" app, invited to the channel); skipped when unset, and never fails the
+release. Upstream's `notify-release-comms.yml` is guarded to
+`mobile-dev-inc/maestro` since its dispatch target is upstream-only.
+Code: `.github/workflows/publish-cli.yaml`. Commit `ci: notify Slack when the CLI is published`.
+
 ---
 
 ## Keeping the fork in sync

@@ -95,6 +95,7 @@ Things the fork owns that a bad conflict resolution silently drops:
 | 4-segment version parsing | `ApiClient.kt` (`CliVersion`) | `build` segment + `baseVersion` present |
 | jreleaser points at `plexinc/Maestro` | `maestro-cli/build.gradle.kts` | grep `plexinc` |
 | Updates/changelog resolve from the fork's releases | `Updates.kt`, `ChangeLogUtils.kt` | grep `plexinc` |
+| Slack notify steps survive; upstream release-comms stays guarded | `publish-cli.yaml`, `notify-release-comms.yml` | grep `SLACK_CHANNEL` / `mobile-dev-inc/maestro` |
 | `REMOTE_DPAD` mapping + `focused` wiring | `WebDriver.kt`, `CdpWebDriver.kt` | grep `REMOTE_` / `focused` |
 | Every `Driver` interface member implemented by fork drivers | `VegaDriver.kt`, tvOS paths | see step 6 — upstream adding an interface method breaks fork-only drivers |
 
