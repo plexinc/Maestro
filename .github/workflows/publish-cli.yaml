@@ -3,6 +3,10 @@ name: Publish CLI
 on:
   workflow_dispatch:
 
+env:
+  # Plex fork: Slack channel notified on publish. The "Plex - Github Actions" app must be invited.
+  SLACK_CHANNEL: project-automated-testing
+
 jobs:
   publish:
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -14,6 +18,9 @@ jobs:
     steps:
       - name: Clone repository
         uses: actions/checkout@v6
+        with:
+          # Full history + tags so the Slack changelog can diff against the previous release.
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -50,3 +57,63 @@ jobs:
       - name: Print jReleaser log
         if: always()
         run: cat maestro-cli/build/jreleaser/trace.log
+
+      - name: Compose Slack message
+        id: slack_payload
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          PLEX_BUILD: ${{ steps.build.outputs.plex_build }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_BOT_TOKEN" ]; then
+            echo "SLACK_BOT_TOKEN not set; skipping Slack notification."
+            exit 0
+          fi
+          CLI_VERSION=$(grep '^CLI_VERSION=' maestro-cli/gradle.properties | cut -d= -f2)
+          TAG="cli-${CLI_VERSION}.${PLEX_BUILD}"
+          RELEASE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+          PREV=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 50 --json tagName,createdAt \
+            | jq -r --arg tag "$TAG" '[.[] | select(.tagName | startswith("cli-")) | select(.tagName != $tag)] | sort_by(.createdAt) | last | .tagName // empty')
+
+          # Commit subjects since the previous release, minus driver-bot commits; capped to stay under Slack's 3000-char block limit.
+          MAX=15
+          if [ -n "$PREV" ] && git rev-parse -q --verify "refs/tags/$PREV" >/dev/null; then
+            SUBJECTS=$(git log --no-merges --format='%s' "$PREV..HEAD" | grep -vF '[skip ci]' || true)
+            COUNT=$(printf '%s' "$SUBJECTS" | grep -c . || true)
+            CHANGES=$(printf '%s\n' "$SUBJECTS" | head -n "$MAX" | cut -c1-150 \
+              | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/^/• /')
+            [ "$COUNT" -gt "$MAX" ] && CHANGES="${CHANGES}"$'\n'"…and $((COUNT - MAX)) more"
+            [ "$COUNT" -eq 0 ] && CHANGES="_No changes since ${PREV}_"
+            CHANGES_HEADER="*Changes since ${PREV}:*"
+          else
+            CHANGES_HEADER="*Changes:*"
+            CHANGES="_No previous release to compare against_"
+          fi
+
+          jq -n \
+            --arg channel "$SLACK_CHANNEL" \
+            --arg tag "$TAG" \
+            --arg release "$RELEASE_URL" \
+            --arg run "$RUN_URL" \
+            --arg changes "${CHANGES_HEADER}"$'\n'"${CHANGES}" \
+            '{
+              channel: $channel,
+              text: "Maestro CLI \($tag) published",
+              blocks: [
+                {type: "section", text: {type: "mrkdwn", text: ":rocket: *Maestro CLI <\($release)|\($tag)> published*\n<\($run)|Workflow run>"}},
+                {type: "section", text: {type: "mrkdwn", text: $changes}}
+              ]
+            }' > slack-payload.json
+          cat slack-payload.json
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Slack
+        if: steps.slack_payload.outputs.enabled == 'true'
+        continue-on-error: true
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        with:
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          method: chat.postMessage
+          payload-file-path: slack-payload.json

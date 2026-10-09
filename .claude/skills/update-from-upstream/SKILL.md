@@ -29,6 +29,7 @@ The fork adds, on top of upstream Maestro:
 | `feat(web): Support attaching to a running Chrome/Electron over CDP` | Attach mode (`--cdp-url` / `--cdp-target`) drives an already-running webview instead of launching Chrome; input routed over CDP since there is no Selenium session. |
 | `chore(fork): add verify-fork-stack skill and resync fork docs` | Fork tooling: the `verify-fork-stack` skill plus the `FORK.md` / stack-table reconciliation it enforces. |
 | `feat(roku): add Roku platform support` | `RokuDriver` over the External Control Protocol (HTTP on device port 8060 — no on-device agent), `RokuEcpClient`/`RokuAppUIParser`/`RokuKeyMapping`, device discovery (`MAESTRO_ROKU_HOST` pin or SSDP scan), `DeviceSpec.Roku`, `RokuLocale`, three new remote KeyCodes (`Remote Info`/`Instant Replay`/`Search`, also mapped on Android), Studio TV mode, and the `e2e/roku_demo_app` fixture. D-pad-only: `tapOn` sends `Select`, swipes are repeated D-pad presses. Unsupported primitives (`setLocation`, `setProxy`, `setDarkMode`, `addMedia`, screen recording) throw or no-op deliberately. Contributed by the Nami team. |
+| `ci: notify Slack when the CLI is published` | `publish-cli` posts tag, release/run links, and changes since the previous `cli-*` release to Slack (`SLACK_CHANNEL`, `SLACK_BOT_TOKEN`; skipped when unset, `continue-on-error`). Also guards upstream's `notify-release-comms.yml` to `mobile-dev-inc/maestro`. |
 
 This table is the **fork commit stack** — keyed on commit subject, not SHA (rebasing rewrites SHAs, subjects are stable). Keep it in sync with `git log --oneline upstream/main..main`.
 
@@ -73,6 +74,7 @@ This table is the **fork commit stack** — keyed on commit subject, not SHA (re
    - **`maestro-cli/gradle.properties`** — keep the `PLEX_BUILD` line; take upstream's `CLI_VERSION` bump.
    - **`maestro-cli/build.gradle.kts`** — keep the `FULL_CLI_VERSION`/`PLEX_BUILD` wiring and the `plexinc/Maestro` jreleaser release block.
    - **`maestro-cli/src/main/java/maestro/cli/api/ApiClient.kt`** — keep `CliVersion`'s `build` segment / `baseVersion` / 4-part parsing.
+   - **`.github/workflows/notify-release-comms.yml`** — keep the `github.repository == 'mobile-dev-inc/maestro'` guard on top of whatever `if:` upstream has.
    - **`mapToSeleniumKey()`** and focus handling in `WebDriver.kt` / `CdpWebDriver.kt` — keep the `REMOTE_DPAD` branches and the `focused` wiring.
 
    After resolving each step: `git add <files> && git rebase --continue`. Abort with `git rebase --abort` (then `git reset --hard fork-backup`) if it goes sideways.
