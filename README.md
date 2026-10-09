@@ -23,6 +23,7 @@
 `plexinc/Maestro` tracks upstream [Maestro](https://github.com/mobile-dev-inc/Maestro) and layers on the capabilities we need ahead of upstream:
 
 - **Apple TV (tvOS) support** — a tvOS driver, device management (`start-device --platform tvos`), an RN Expo tvOS demo app, and tvOS e2e flows.
+- **Physical iPhone support** — launch apps through `devicectl` and open links through the device's XCTest driver, so flows run on a USB-connected iPhone (see [FORK.md](FORK.md#physical-iphones)).
 - **Amazon Vega (Fire TV) support** — a driver for Amazon's Vega OS (a Linux/React Native OS, not Android), driven through the `vega`/`vda` CLI: view hierarchy from the on-device automation toolkit, D-pad/touch/swipe/text input, and screenshots.
 - **Roku support** — a driver for Roku devices over the External Control Protocol (an HTTP API on the device, no on-device agent): SceneGraph view hierarchy, D-pad/remote-key input, text entry, screenshots, and network device discovery (`MAESTRO_ROKU_HOST` pin or SSDP scan). Contributed by the [Nami](https://www.nami.ml) team ([rku.dev](https://www.rku.dev)).
 - **Canvas-based UI (web) support** — for D-pad-driven TV web apps (e.g. Lightning/WebGL): `data-testid`-first element selection, D-pad/arrow-key mapping (with Menu→back), URL-shaped `appId` detection, a `focused:` selector, and `--platform web` device selection.

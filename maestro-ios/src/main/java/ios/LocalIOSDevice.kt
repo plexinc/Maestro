@@ -4,6 +4,7 @@ import com.github.michaelbull.result.*
 import device.IOSDevice
 import device.IOSScreenRecording
 import xcuitest.api.DeviceInfo
+import ios.devicectl.DeviceControlIOSDevice
 import ios.xctest.XCTestIOSDevice
 import okio.Sink
 import java.io.InputStream
@@ -116,6 +117,10 @@ class LocalIOSDevice(
     }
 
     override fun openLink(link: String): Result<Unit, Throwable> {
+        // A physical device has no simctl, so the driver opens the link.
+        if (deviceController is DeviceControlIOSDevice) {
+            return xcTestDevice.openLink(link)
+        }
         return deviceController.openLink(link)
     }
 

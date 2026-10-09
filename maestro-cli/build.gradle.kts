@@ -51,6 +51,7 @@ tasks.named<Jar>("jar") {
         include(
             "maestro-driver-ios/**",
             "maestro-driver-iosUITests/**",
+            "MaestroDriverLib/**",
             "maestro-driver-ios.xcodeproj/**",
         )
     }
@@ -374,6 +375,7 @@ tasks.register<Copy>("createTestResources") {
         include(
             "maestro-driver-ios/**",
             "maestro-driver-iosUITests/**",
+            "MaestroDriverLib/**",
             "maestro-driver-ios.xcodeproj/**"
         )
     }

@@ -3,6 +3,7 @@ package ios.xctest
 import com.google.common.truth.Truth.assertThat
 import ios.IOSDeviceErrors
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import xcuitest.XCTestClient
@@ -56,6 +57,42 @@ class XCTestIOSDeviceTest {
         // the cached Unreachable that the latch in XCTestDriverClient re-throws on every call.
         assertThrows<IOSDeviceErrors.Unreachable> { device.tap(30, 40) }
     }
+
+    @Test
+    fun `openLink asks the driver to open the URL`() {
+        val requests = mutableListOf<okhttp3.Request>()
+        val driverClient = XCTestDriverClient(
+            installer = NoopInstaller,
+            client = XCTestClient("localhost", 1),
+            okHttpClient = recordingOkHttpClient(requests),
+        )
+        val device = XCTestIOSDevice(
+            deviceId = "test-device",
+            client = driverClient,
+            getInstalledApps = { emptySet() },
+        )
+
+        val result = device.openLink("plex://?test=1")
+
+        assertThat(result.isOk).isTrue()
+        assertThat(requests.single().url.encodedPath).isEqualTo("/openUrl")
+        val body = okio.Buffer().also { requests.single().body!!.writeTo(it) }.readUtf8()
+        assertThat(body).contains("plex://?test=1")
+    }
+
+    private fun recordingOkHttpClient(requests: MutableList<okhttp3.Request>): OkHttpClient =
+        OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                requests += chain.request()
+                okhttp3.Response.Builder()
+                    .request(chain.request())
+                    .protocol(okhttp3.Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body("".toResponseBody(null))
+                    .build()
+            }
+            .build()
 
     private fun throwingOkHttpClient(cause: Throwable): OkHttpClient =
         OkHttpClient.Builder()
