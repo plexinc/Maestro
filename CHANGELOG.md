@@ -7,6 +7,7 @@
 - iOS: record the external display on tvOS simulators, where screen recordings were never captured
 - iOS: don't hang the run forever when a simulator screen recording refuses to stop
 - iOS: report screen recording as unsupported on physical devices instead of crashing with `TODO()`
+- iOS: read the view hierarchy on a physical Apple TV, where the driver stopped on every request
 - Web: record the screen over CDP when attached to a running Chrome/Electron, where recording used to be a silent no-op
 
 ## 2.8.0
