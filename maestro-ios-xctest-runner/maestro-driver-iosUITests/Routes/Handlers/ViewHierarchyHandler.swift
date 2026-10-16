@@ -61,9 +61,15 @@ struct ViewHierarchyHandler: HTTPHandler {
         let appHierarchy = try getHierarchyWithFallback(foregroundApp)
         await SystemPermissionHelper.handleSystemPermissionAlertIfNeeded(appHierarchy: appHierarchy, foregroundApp: foregroundApp)
                 
+        // tvOS has no status bar, and a physical Apple TV's home screen answers
+        // only while it is in the foreground, failing the whole request otherwise.
+        #if os(tvOS)
+        let statusBars: [AXElement] = []
+        #else
         let statusBars = logger.measure(message: "Fetch status bar hierarchy") {
             fullStatusBars(homescreenApplication)
         } ?? []
+        #endif
         
         // Fetch Safari WebView hierarchy for iOS 26+ (runs in separate SafariViewService process). Skip on tvOS.
         #if os(tvOS)
@@ -74,7 +80,11 @@ struct ViewHierarchyHandler: HTTPHandler {
         }
         #endif
         
+        #if os(tvOS)
+        let deviceFrame = foregroundApp.frame
+        #else
         let deviceFrame = homescreenApplication.frame
+        #endif
         let deviceAxFrame = [
             "X": Double(deviceFrame.minX),
             "Y": Double(deviceFrame.minY),
