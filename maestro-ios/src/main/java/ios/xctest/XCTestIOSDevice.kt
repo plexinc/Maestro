@@ -2,6 +2,7 @@ package ios.xctest
 
 import maestro.utils.ScreenRecordingUnsupported
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.runCatching
 import device.IOSDevice
 import hierarchy.ViewHierarchy
 import ios.IOSDeviceErrors
@@ -160,7 +161,7 @@ class XCTestIOSDevice(
     }
 
     override fun openLink(link: String): Result<Unit, Throwable> {
-        error("Not supported")
+        return runCatching { execute { client.openUrl(link) } }
     }
 
     override fun takeScreenshot(out: Sink, compressed: Boolean) {
