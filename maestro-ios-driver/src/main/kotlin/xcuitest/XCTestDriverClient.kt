@@ -207,6 +207,10 @@ class XCTestDriverClient(
         executeJsonRequest("pressButton", PressButtonRequest(name))
     }
 
+    fun openUrl(url: String) {
+        executeJsonRequest("openUrl", OpenUrlRequest(url))
+    }
+
     fun eraseText(charactersToErase: Int, appIds: Set<String>) {
         executeJsonRequest("eraseText", EraseTextRequest(charactersToErase, appIds))
     }

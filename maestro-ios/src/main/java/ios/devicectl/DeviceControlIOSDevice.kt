@@ -7,6 +7,7 @@ import device.IOSScreenRecording
 import hierarchy.ViewHierarchy
 import okio.Sink
 import org.slf4j.LoggerFactory
+import util.CommandLineUtils
 import util.LocalIOSDevice
 import xcuitest.api.DeviceInfo
 import xcuitest.installer.LocalXCTestInstaller
@@ -65,7 +66,16 @@ class DeviceControlIOSDevice(override val deviceId: String) : IOSDevice {
     }
 
     override fun launch(id: String, launchArguments: Map<String, Any>) {
-        TODO("Not yet implemented")
+        // Arguments go as `-key value`, which the app reads as user defaults.
+        val arguments = launchArguments.flatMap { (key, value) -> listOf("-$key", value.toString()) }
+
+        CommandLineUtils.runCommand(
+            listOf(
+                "xcrun", "devicectl", "device", "process", "launch",
+                "--device", deviceId,
+                id,
+            ) + arguments
+        )
     }
 
     override fun stop(id: String) {

@@ -216,6 +216,7 @@
 				<string>Routes/Handlers/InputTextRouteHandler.swift</string>
 				<string>Routes/Handlers/KeyboardRouteHandler.swift</string>
 				<string>Routes/Handlers/LaunchAppHandler.swift</string>
+				<string>Routes/Handlers/OpenUrlHandler.swift</string>
 				<string>Routes/Handlers/PressButtonHandler.swift</string>
 				<string>Routes/Handlers/PressKeyHandler.swift</string>
 				<string>Routes/Handlers/RunningAppRouteHandler.swift</string>

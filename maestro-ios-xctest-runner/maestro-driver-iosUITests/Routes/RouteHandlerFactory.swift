@@ -44,6 +44,8 @@ class RouteHandlerFactory {
             return TerminateAppHandler()
         case .launchApp:
              return LaunchAppHandler()
+        case .openUrl:
+            return OpenUrlHandler()
         }
     }
 }

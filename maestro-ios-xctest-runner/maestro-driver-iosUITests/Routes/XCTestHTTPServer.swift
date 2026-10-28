@@ -22,6 +22,7 @@ enum Route: String, CaseIterable {
     case keyboard
     case launchApp
     case terminateApp
+    case openUrl
 
     func toHTTPRoute() -> HTTPRoute {
         return HTTPRoute(rawValue)

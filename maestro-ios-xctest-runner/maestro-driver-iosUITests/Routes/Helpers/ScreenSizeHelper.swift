@@ -38,10 +38,12 @@ struct ScreenSizeHelper {
 
         do {
             let currentAppBundleId = app.bundleID
+            // The app's orientation, not the device's: an app that turns
+            // itself must not get the size cached before it turned.
             #if os(tvOS)
             let currentOrientation = Optional(DeviceOrientation.unknown)
             #else
-            let currentOrientation = DeviceOrientation(rawValue: XCUIDevice.shared.orientation.rawValue)
+            let currentOrientation = Optional(actualOrientation())
             #endif
 
             if let cached = cachedSize,
@@ -80,11 +82,30 @@ struct ScreenSizeHelper {
         }
     }
 
+    /// The foreground app's interface orientation, read from XCUIApplication's
+    /// private `interfaceOrientation`. Nil when there is no foreground app or
+    /// XCTest does not have it.
+    private static func appInterfaceOrientation() -> Int? {
+        guard let app = RunningApp.getForegroundApp() as NSObject?,
+              app.responds(to: NSSelectorFromString("interfaceOrientation")) else {
+            return nil
+        }
+        return (app.value(forKey: "interfaceOrientation") as? NSNumber)?.intValue
+    }
+
+    /// The device orientation that matches the foreground app. An app locked to
+    /// landscape on an upright device, such as a video player, reports its
+    /// frames in landscape, so the size and taps must follow the app.
     private static func actualOrientation() -> DeviceOrientation {
         #if os(tvOS)
         let orientation = Optional(DeviceOrientation.unknown)
         #else
-        let orientation = DeviceOrientation(rawValue: XCUIDevice.shared.orientation.rawValue)
+        let orientation = DeviceOrientation(
+            rawValue: OrientationResolver.deviceOrientation(
+                appInterfaceOrientation: appInterfaceOrientation(),
+                deviceOrientation: XCUIDevice.shared.orientation.rawValue
+            )
+        )
         #endif
 
         guard let unwrappedOrientation = orientation, orientation != .unknown else {

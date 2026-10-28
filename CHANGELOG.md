@@ -2,12 +2,15 @@
 
 ## Unreleased
 
+- iOS: follow the foreground app's orientation, so an app locked to landscape on an upright device keeps its elements in the hierarchy instead of losing everything past the portrait width
 - Core: skip `startRecording` with a warning on platforms that cannot record, instead of failing the flow or leaving a 0-byte file
 - Core: don't let a failed screen recording start silently disable every later recording in the session
 - iOS: record the external display on tvOS simulators, where screen recordings were never captured
 - iOS: don't hang the run forever when a simulator screen recording refuses to stop
 - iOS: report screen recording as unsupported on physical devices instead of crashing with `TODO()`
 - iOS: read the view hierarchy on a physical Apple TV, where the driver stopped on every request
+- iOS: build the physical-device driver, which failed without `MaestroDriverLib` in the CLI jar
+- iOS: launch apps and open links on a physical iPhone, which crashed with `TODO()`
 - Web: record the screen over CDP when attached to a running Chrome/Electron, where recording used to be a silent no-op
 
 ## 2.8.0
