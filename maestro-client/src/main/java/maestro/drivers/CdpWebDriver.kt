@@ -25,7 +25,6 @@ import maestro.web.record.JcodecVideoEncoder
 import maestro.web.record.WebScreenRecorder
 import okio.Sink
 import okio.buffer
-import org.openqa.selenium.By
 import org.openqa.selenium.JavascriptExecutor
 import org.openqa.selenium.Keys
 import org.openqa.selenium.WebDriver
@@ -1028,20 +1027,13 @@ class CdpWebDriver(
             val iframe = jsExecutor.executeScript("return document.activeElement") as WebElement
             driver.switchTo().frame(iframe)
             try {
-                jsExecutor.executeScript("$maestroWebScript")
-                val xPath = jsExecutor.executeScript(
-                    "return window.maestro.createXPathFromElement(document.activeElement)"
-                ) as String
-                val element = driver.findElement(By.ByXPath(xPath))
-                action(element)
+                action(driver.switchTo().activeElement())
             } finally {
                 try { driver.switchTo().defaultContent() }
                 catch (e: Exception) { LOGGER.warn("Failed to switch back to default content", e) }
             }
         } else {
-            val xPath = executeJS("window.maestro.createXPathFromElement(document.activeElement)") as String
-            val element = driver.findElement(By.ByXPath(xPath))
-            action(element)
+            action(driver.switchTo().activeElement())
         }
     }
 
