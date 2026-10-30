@@ -16,18 +16,28 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+
+class CdpReplyLostException(
+    messageId: Int,
+    closeReason: CloseReason?,
+    otherEvents: List<String>,
+) : IllegalStateException(
+    "No message with id $messageId received (close reason: $closeReason, other events: $otherEvents)"
+)
 
 /**
  * Descriptor for a CDP target (an open tab/page).
@@ -374,16 +384,27 @@ class CdpClient(
     }
 
     private suspend fun DefaultClientWebSocketSession.waitForMessage(messageId: Int): String {
+        val unmatched = mutableListOf<String>()
         for (frame in incoming) {
             if (frame is Frame.Text) {
                 val text = frame.readText()
                 if (text.contains("\"id\":$messageId")) {
                     return text
                 }
+                unmatched += describeEvent(text)
             }
         }
-        error("No message with id $messageId received")
+        val reason = withTimeoutOrNull(1000) { closeReason.await() }
+        throw CdpReplyLostException(messageId, reason, unmatched)
     }
+
+    // Page data (URLs, console output) can carry credentials, so keep only Chrome's own fields.
+    private fun describeEvent(text: String): String = runCatching {
+        val root = json.parseToJsonElement(text).jsonObject
+        val method = root["method"]?.jsonPrimitive?.contentOrNull ?: "reply ${root["id"]}"
+        val reason = root["params"]?.jsonObject?.get("reason")?.jsonPrimitive?.contentOrNull
+        if (reason != null) "$method ($reason)" else method
+    }.getOrDefault("unparseable frame")
 
     private suspend fun <R> DefaultClientWebSocketSession.use(block: suspend (DefaultClientWebSocketSession) -> R): R {
         return try {

@@ -1,6 +1,7 @@
 package maestro.drivers
 
 import CdpClient
+import CdpReplyLostException
 import CdpTarget
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.runBlocking
@@ -80,6 +81,8 @@ class CdpWebDriver(
 
     // URL hint used to resolve the target when no explicit id is given (the flow's APP_ID).
     private var appIdHint: String? = null
+
+    private var lastDeviceInfo: DeviceInfo? = null
 
     init {
         Maestro::class.java.getResourceAsStream("/maestro-web.js")?.let {
@@ -186,9 +189,11 @@ class CdpWebDriver(
         return target
     }
 
-    private fun executeJS(js: String): Any? {
+    // A lost reply to non-idempotent JS isn't retried: Chrome may already have run it.
+    private fun executeJS(js: String, idempotent: Boolean = true): Any? {
         return runBlocking {
             repeat(JS_EXECUTION_MAX_ATTEMPTS) { attempt ->
+                var sentJs = false
                 try {
                     val target = resolveTarget()
 
@@ -200,6 +205,7 @@ class CdpWebDriver(
 
                     Thread.sleep(100)
 
+                    sentJs = true
                     val resultStr = cdpClient.evaluate(js, target)
 
                     // CDP returns an empty value for expressions that evaluate to undefined (e.g.
@@ -212,7 +218,9 @@ class CdpWebDriver(
                     // The page can navigate or reload out from under us (e.g. right after
                     // launchApp/clearState), invalidating the CDP target mid-evaluation. Wait
                     // briefly for it to settle and retry against a freshly listed target.
-                    if (isRetryableJsError(e) && attempt < JS_EXECUTION_MAX_ATTEMPTS - 1) {
+                    val retryable = isRetryableJsError(e) ||
+                        (e is CdpReplyLostException && (idempotent || !sentJs))
+                    if (retryable && attempt < JS_EXECUTION_MAX_ATTEMPTS - 1) {
                         LOGGER.warn("Transient error executing JS, retrying (attempt ${attempt + 1})", e)
                         // The target may have been invalidated by navigation; force a re-resolve.
                         resolvedTarget = null
@@ -240,7 +248,7 @@ class CdpWebDriver(
         if (point.y >= 0 && point.y.toLong() <= windowHeight) return 0L
 
         val scrolledPixels =
-            executeJS("(() => {const delta = ${point.y} - Math.floor(window.innerHeight / 2); window.scrollBy({ top: delta, left: 0, behavior: 'smooth' }); return delta})()") as Int
+            executeJS("(() => {const delta = ${point.y} - Math.floor(window.innerHeight / 2); window.scrollBy({ top: delta, left: 0, behavior: 'smooth' }); return delta})()", idempotent = false) as Int
         sleep(3000L)
         return scrolledPixels.toLong()
     }
@@ -250,7 +258,7 @@ class CdpWebDriver(
     }
 
     private fun scroll(top: String, left: String) {
-        executeJS("window.scroll({ top: $top, left: $left, behavior: 'smooth' })")
+        executeJS("window.scroll({ top: $top, left: $left, behavior: 'smooth' })", idempotent = false)
     }
 
     private fun random(start: Int, end: Int): Int {
@@ -259,6 +267,7 @@ class CdpWebDriver(
 
     override fun close() {
         injectedArguments = emptyMap()
+        lastDeviceInfo = null
 
         try {
             seleniumDriver?.quit()
@@ -275,8 +284,13 @@ class CdpWebDriver(
     }
 
     override fun deviceInfo(): DeviceInfo {
-        val width = executeJS("window.innerWidth") as Int
-        val height = executeJS("window.innerHeight") as Int
+        val size = executeJS("[window.innerWidth, window.innerHeight]") as? List<*>
+        val width = (size?.getOrNull(0) as? Number)?.toInt()
+        val height = (size?.getOrNull(1) as? Number)?.toInt()
+
+        if (width == null || height == null) {
+            return lastDeviceInfo ?: error("Could not read the window size (got $size)")
+        }
 
         return DeviceInfo(
             platform = Platform.WEB,
@@ -284,7 +298,7 @@ class CdpWebDriver(
             heightPixels = height,
             widthGrid = width,
             heightGrid = height,
-        )
+        ).also { lastDeviceInfo = it }
     }
 
     override fun launchApp(
@@ -502,7 +516,7 @@ class CdpWebDriver(
             return
         }
 
-        executeJS("window.maestro.tapOnSyntheticElement(${point.x}, ${point.y})")
+        executeJS("window.maestro.tapOnSyntheticElement(${point.x}, ${point.y})", idempotent = false)
     }
 
     override fun longPress(point: Point) {
@@ -594,7 +608,7 @@ class CdpWebDriver(
         
         if (isFlutter) {
             // Use Flutter-specific smooth animated scrolling
-            executeJS("window.maestro.smoothScrollFlutter('UP', 500)")
+            executeJS("window.maestro.smoothScrollFlutter('UP', 500)", idempotent = false)
         } else {
             // Use standard scroll for regular web pages
             scroll("window.scrollY + Math.round(window.innerHeight / 2)", "window.scrollX")
@@ -652,7 +666,7 @@ class CdpWebDriver(
         
         if (isFlutter) {
             // Flutter web: Use smooth animated scrolling with easing
-            executeJS("window.maestro.smoothScrollFlutter('${swipeDirection.name}', $durationMs)")
+            executeJS("window.maestro.smoothScrollFlutter('${swipeDirection.name}', $durationMs)", idempotent = false)
         } else {
             // HTML web: Use standard window scrolling
             when (swipeDirection) {
