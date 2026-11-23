@@ -11,6 +11,7 @@
 - iOS: read the view hierarchy on a physical Apple TV, where the driver stopped on every request
 - iOS: build the physical-device driver, which failed without `MaestroDriverLib` in the CLI jar
 - iOS: launch apps and open links on a physical iPhone, which crashed with `TODO()`
+- iOS: build the tvOS driver for tvOS 17 and later instead of the SDK's own version, and the iOS driver for iOS 15 and later, the oldest that Xcode 27 accepts
 - Web: record the screen over CDP when attached to a running Chrome/Electron, where recording used to be a silent no-op
 
 ## 2.8.0
