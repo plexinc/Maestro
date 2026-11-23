@@ -461,7 +461,7 @@ object DeviceService {
 
         return connectedDevices.mapNotNull { device ->
             val udid = device.hardwareProperties?.udid
-            if (device.connectionProperties.tunnelState != DeviceCtlResponse.ConnectionProperties.CONNECTED || udid == null) {
+            if (device.connectionProperties.tunnelState != DeviceCtlResponse.ConnectionProperties.CONNECTED || udid == null || device.isSimulator) {
                 return@mapNotNull null
             }
 

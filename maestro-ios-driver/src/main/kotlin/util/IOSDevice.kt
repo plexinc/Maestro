@@ -26,6 +26,9 @@ data class DeviceCtlResponse(
         val platform: ApplePlatform
             get() = if (hardwareProperties?.platform == "tvOS") ApplePlatform.TVOS else ApplePlatform.IOS
 
+        val isSimulator: Boolean
+            get() = hardwareProperties?.reality == "simulated"
+
         fun driverAddress(): String? {
             if (platform != ApplePlatform.TVOS) return null
             return connectionProperties.tunnelIPAddress
@@ -53,5 +56,6 @@ data class DeviceCtlResponse(
     data class HardwareProperties(
         val udid: String?,
         val platform: String?,
+        val reality: String?,
     )
 }

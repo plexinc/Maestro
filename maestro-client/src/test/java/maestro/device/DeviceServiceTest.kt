@@ -259,4 +259,38 @@ internal class DeviceServiceTest {
         assertThat(iPhone.deviceSpec.platform).isEqualTo(Platform.IOS)
     }
 
+    @Test
+    fun `a running simulator that devicectl lists is not a physical device`(@TempDir dir: File) {
+        val devicectlOutput = File(dir, "devicectl.json").apply {
+            writeText(
+                """
+                {
+                  "result" : {
+                    "devices" : [
+                      {
+                        "connectionProperties" : { "transportType" : "localNetwork", "tunnelIPAddress" : "fd5a:76a0:eeec::1", "tunnelState" : "connected" },
+                        "deviceProperties" : { "name" : "Bedroom", "osVersionNumber" : "18.6" },
+                        "hardwareProperties" : { "deviceType" : "appleTV", "platform" : "tvOS", "reality" : "physical", "udid" : "00008110-000A1B2C3D4E5F60" },
+                        "identifier" : "1D7A0F5C-63B2-5E1A-9C44-2B8E0D6F7A31"
+                      },
+                      {
+                        "connectionProperties" : { "transportType" : "sameMachine", "tunnelState" : "connected" },
+                        "deviceProperties" : { "name" : "Apple TV 4K (3rd generation)", "osVersionNumber" : "26.1" },
+                        "hardwareProperties" : { "deviceType" : "appleTV", "platform" : "tvOS", "reality" : "simulated", "udid" : "1FC2FD96-9572-45FB-9F6F-47A288608705" },
+                        "identifier" : "1FC2FD96-9572-45FB-9F6F-47A288608705"
+                      }
+                    ]
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        val deviceCtlProcess = mockk<DeviceCtlProcess>()
+        every { deviceCtlProcess.devicectlDevicesOutput() } returns devicectlOutput
+
+        val devices = DeviceService.listAppleConnectedDevices(LocalIOSDevice(deviceCtlProcess))
+
+        assertThat(devices.map { it.instanceId }).containsExactly("00008110-000A1B2C3D4E5F60")
+    }
+
 }
