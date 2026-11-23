@@ -15,6 +15,7 @@ import maestro.utils.TempFileHandler
 import okio.buffer
 import okio.source
 import org.slf4j.LoggerFactory
+import util.ApplePlatform
 import util.DeviceCtlResponse
 import util.LocalIOSDevice
 import util.LocalSimulatorUtils
@@ -448,9 +449,9 @@ object DeviceService {
             } + listAppleConnectedDevices()
     }
 
-    fun listAppleConnectedDevices(): List<Device.Connected> {
-        val connectedIphoneList = try {
-            LocalIOSDevice().listDeviceViaDeviceCtl()
+    fun listAppleConnectedDevices(localIOSDevice: LocalIOSDevice = LocalIOSDevice()): List<Device.Connected> {
+        val connectedDevices = try {
+            localIOSDevice.listDeviceViaDeviceCtl()
         } catch (ignored: Exception) {
             // devicectl is unavailable on older Xcode/macOS (needs Xcode 15 / macOS 13.5+),
             // where it produces no output. Physical-device enumeration is optional, so degrade
@@ -458,9 +459,9 @@ object DeviceService {
             return emptyList()
         }
 
-        return connectedIphoneList.mapNotNull { device ->
+        return connectedDevices.mapNotNull { device ->
             val udid = device.hardwareProperties?.udid
-            if (device.connectionProperties.tunnelState != DeviceCtlResponse.ConnectionProperties.CONNECTED || udid == null) {
+            if (device.connectionProperties.tunnelState != DeviceCtlResponse.ConnectionProperties.CONNECTED || udid == null || device.isSimulator) {
                 return@mapNotNull null
             }
 
@@ -470,12 +471,13 @@ object DeviceService {
                 device.identifier
             ).joinToString(" - ")
 
+            val isTvOS = device.platform == ApplePlatform.TVOS
             Device.Connected(
                 instanceId = udid,
                 description = description,
-                platform = Platform.IOS,
+                platform = if (isTvOS) Platform.TVOS else Platform.IOS,
                 deviceType = Device.DeviceType.REAL,
-                deviceSpec = DeviceSpec.Ios.DEFAULT
+                deviceSpec = if (isTvOS) DeviceSpec.Tvos.DEFAULT else DeviceSpec.Ios.DEFAULT
             )
         }
     }

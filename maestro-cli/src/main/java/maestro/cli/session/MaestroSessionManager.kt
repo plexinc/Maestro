@@ -43,6 +43,7 @@ import maestro.orchestra.WorkspaceConfig.PlatformConfiguration
 import maestro.orchestra.workspace.WorkspaceExecutionPlanner
 import maestro.utils.TempFileHandler
 import org.slf4j.LoggerFactory
+import util.ApplePlatform
 import util.IOSDeviceType
 import util.LocalSimulatorUtils
 import util.XCRunnerCLIUtils
@@ -163,13 +164,18 @@ object MaestroSessionManager {
         if (host == null) {
             val device = PickDeviceInteractor.pickDevice(deviceId, driverHostPort, platform, deviceIndex)
 
-            if (device.deviceType == Device.DeviceType.REAL && device.platform == Platform.IOS) {
-                PrintUtils.message("Detected connected iPhone with ${device.instanceId}!")
-                val driverBuilder = DriverBuilder()
+            val applePlatform = when (device.platform) {
+                Platform.IOS -> ApplePlatform.IOS
+                Platform.TVOS -> ApplePlatform.TVOS
+                else -> null
+            }
+            if (device.deviceType == Device.DeviceType.REAL && applePlatform != null) {
+                PrintUtils.message("Detected connected ${device.platform.description} device ${device.instanceId}!")
                 RealIOSDeviceDriver(
-                    destination = "platform=iOS,id=${device.instanceId}",
+                    destination = applePlatform.destination(device.instanceId),
                     teamId = teamId,
-                    driverBuilder = driverBuilder
+                    driverBuilder = DriverBuilder(),
+                    platform = applePlatform,
                 ).validateAndUpdateDriver()
             }
             return SelectedDevice(
@@ -390,30 +396,32 @@ object MaestroSessionManager {
                 throw UnsupportedOperationException("Unsupported device type $deviceType for iOS platform")
             }
         }
-        val isTvOS = deviceType == Device.DeviceType.SIMULATOR && LocalSimulatorUtils.isTV(deviceId)
+        val realDevice by lazy { util.LocalIOSDevice().listDeviceViaDeviceCtl(deviceId) }
+        val platform = when {
+            deviceType == Device.DeviceType.REAL -> realDevice.platform
+            LocalSimulatorUtils.isTV(deviceId) -> ApplePlatform.TVOS
+            else -> ApplePlatform.IOS
+        }
+        val driverAddress = if (deviceType == Device.DeviceType.REAL) realDevice.driverAddress() else null
+        val xctestHost = driverAddress ?: defaultXctestHost
         val iOSDriverConfig = when (deviceType) {
             Device.DeviceType.REAL -> {
                 val maestroDirectory = Paths.get(System.getProperty("user.home"), ".maestro")
-                val driverPath = maestroDirectory.resolve("maestro-iphoneos-driver-build").resolve("driver-iphoneos")
-                    .resolve("Build").resolve("Products")
                 IOSDriverConfig(
                     prebuiltRunner = false,
-                    sourceDirectory = driverPath.pathString,
+                    sourceDirectory = platform.productsDirectory(maestroDirectory).pathString,
                     context = Context.CLI,
-                    snapshotKeyHonorModalViews = platformConfiguration?.ios?.snapshotKeyHonorModalViews
+                    snapshotKeyHonorModalViews = platformConfiguration?.ios?.snapshotKeyHonorModalViews,
+                    platform = platform,
                 )
             }
             Device.DeviceType.SIMULATOR -> {
-                val sourceDirectory = if (isTvOS) {
-                    "driver-appletvSimulator"
-                } else {
-                    "driver-iPhoneSimulator"
-                }
                 IOSDriverConfig(
                     prebuiltRunner = false,
-                    sourceDirectory = sourceDirectory,
+                    sourceDirectory = platform.simulatorDriverDirectory,
                     context = Context.CLI,
-                    snapshotKeyHonorModalViews = platformConfiguration?.ios?.snapshotKeyHonorModalViews
+                    snapshotKeyHonorModalViews = platformConfiguration?.ios?.snapshotKeyHonorModalViews,
+                    platform = platform,
                 )
             }
              else -> throw UnsupportedOperationException("Unsupported device type $deviceType for iOS platform")
@@ -421,16 +429,12 @@ object MaestroSessionManager {
 
         val tempFileHandler = TempFileHandler()
         val deviceController = when (deviceType) {
-            Device.DeviceType.REAL -> {
-                val device = util.LocalIOSDevice().listDeviceViaDeviceCtl(deviceId)
-                val deviceCtlDevice = DeviceControlIOSDevice(deviceId = device.identifier)
-                deviceCtlDevice
-            }
+            Device.DeviceType.REAL -> DeviceControlIOSDevice(deviceId = realDevice.identifier)
             Device.DeviceType.SIMULATOR -> {
                 val simctlIOSDevice = SimctlIOSDevice(
                     deviceId = deviceId,
                     tempFileHandler = tempFileHandler,
-                    isTvOS = isTvOS,
+                    isTvOS = platform == ApplePlatform.TVOS,
                 )
                 simctlIOSDevice
             }
@@ -439,7 +443,8 @@ object MaestroSessionManager {
 
         val xcTestInstaller = LocalXCTestInstaller(
             deviceId = deviceId,
-            host = defaultXctestHost,
+            host = xctestHost,
+            driverListenAddress = driverAddress,
             defaultPort = driverHostPort ?: defaultXcTestPort,
             reinstallDriver = reinstallDriver,
             deviceType = iOSDeviceType,
@@ -451,7 +456,7 @@ object MaestroSessionManager {
 
         val xcTestDriverClient = XCTestDriverClient(
             installer = xcTestInstaller,
-            client = XCTestClient(defaultXctestHost, driverHostPort ?: defaultXcTestPort),
+            client = XCTestClient(xctestHost, driverHostPort ?: defaultXcTestPort),
             reinstallDriver = reinstallDriver,
         )
 

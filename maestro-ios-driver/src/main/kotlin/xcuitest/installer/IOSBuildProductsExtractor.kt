@@ -3,6 +3,7 @@ package xcuitest.installer
 import maestro.utils.TempFileHandler
 import org.rauschig.jarchivelib.ArchiverFactory
 import org.slf4j.LoggerFactory
+import util.ApplePlatform
 import util.IOSDeviceType
 import java.io.File
 import java.io.FileNotFoundException
@@ -28,6 +29,7 @@ class IOSBuildProductsExtractor(
     private val target: Path,
     private val context: Context,
     private val deviceType: IOSDeviceType,
+    private val platform: ApplePlatform = ApplePlatform.IOS,
 ) {
 
     companion object {
@@ -35,52 +37,29 @@ class IOSBuildProductsExtractor(
     }
 
     fun extract(sourceDirectory: String): BuildProducts {
-        val productNames = driverProductNames(sourceDirectory)
-
         LOGGER.info("[Start] Writing build products")
         writeBuildProducts(sourceDirectory)
         LOGGER.info("[Done] Writing build products")
 
-        LOGGER.info("[Start] Writing ${productNames.runnerZip} app")
-        extractZipToApp(productNames.runnerZip)
-        LOGGER.info("[Done] Writing ${productNames.runnerZip} app")
+        LOGGER.info("[Start] Writing ${platform.runnerZip} app")
+        extractZipToApp(platform.runnerZip)
+        LOGGER.info("[Done] Writing ${platform.runnerZip} app")
 
-        LOGGER.info("[Start] Writing ${productNames.hostZip} app")
-        extractZipToApp(productNames.hostZip)
-        LOGGER.info("[Done] Writing ${productNames.hostZip} app")
+        LOGGER.info("[Start] Writing ${platform.hostZip} app")
+        extractZipToApp(platform.hostZip)
+        LOGGER.info("[Done] Writing ${platform.hostZip} app")
 
         val targetFile = target.toFile()
         val xctestRun = targetFile.walkTopDown().firstOrNull { it.extension == "xctestrun" }
             ?: throw FileNotFoundException("xctestrun config does not exist")
-        val uiRunner = targetFile.walkTopDown().firstOrNull { it.name == productNames.runnerAppName }
-            ?: throw FileNotFoundException("ui test runner does not exist: ${productNames.runnerAppName}")
+        val uiRunner = targetFile.walkTopDown().firstOrNull { it.name == platform.runnerAppName }
+            ?: throw FileNotFoundException("ui test runner does not exist: ${platform.runnerAppName}")
 
         return BuildProducts(
             xctestRunPath = xctestRun,
             uiRunnerPath = uiRunner
         )
     }
-
-    private fun driverProductNames(sourceDirectory: String): DriverProductNames {
-        return when (sourceDirectory) {
-            "driver-appletvSimulator" -> DriverProductNames(
-                hostZip = "maestro-driver-tvos.zip",
-                runnerZip = "maestro-driver-tvosUITests-Runner.zip",
-                runnerAppName = "maestro-driver-tvosUITests-Runner.app",
-            )
-            else -> DriverProductNames(
-                hostZip = "maestro-driver-ios.zip",
-                runnerZip = "maestro-driver-iosUITests-Runner.zip",
-                runnerAppName = "maestro-driver-iosUITests-Runner.app",
-            )
-        }
-    }
-
-    private data class DriverProductNames(
-        val hostZip: String,
-        val runnerZip: String,
-        val runnerAppName: String,
-    )
 
     private fun extractZipToApp(appFileName: String) {
         val appZip = target.toFile().walk().firstOrNull { it.name == appFileName && it.extension == "zip" }

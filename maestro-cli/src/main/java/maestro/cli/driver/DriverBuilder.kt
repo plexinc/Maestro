@@ -25,8 +25,8 @@ class DriverBuilder(private val processBuilderFactory: XcodeBuildProcessBuilderF
      * Directory Structure:
      *   1. workingDirectory (Path): Root working directory for Maestro stored in the user's home directory.
      *      .maestro
-     *      |_ maestro-iphoneos-driver-build
-     *         |_ driver-iphoneos: Consists the build products to setup iOS driver: maestro-driver-*.xctestrun,
+     *      |_ maestro-iphoneos-driver-build (maestro-appletvos-driver-build for an Apple TV)
+     *         |_ driver-iphoneos (driver-appletvos): Consists the build products to setup iOS driver: maestro-driver-*.xctestrun,
      *            Debug-iphoneos/maestro-driver-iosUITests-Runner.app, and Debug-iphoneos/maestro-driver-ios.app
      *         |_ output.log: In case of errors output.log would be there to help debug
      *
@@ -40,7 +40,7 @@ class DriverBuilder(private val processBuilderFactory: XcodeBuildProcessBuilderF
 
         // Create temporary build directory
         val workingDirectory = Paths.get(config.sourceCodeRoot, ".maestro")
-        val buildDir = Files.createDirectories(workingDirectory.resolve("maestro-iphoneos-driver-build")).apply {
+        val buildDir = Files.createDirectories(workingDirectory.resolve(config.platform.buildDirectory)).apply {
             // Cleanup directory before we execute the build
             toFile().deleteRecursively()
         }
@@ -58,7 +58,7 @@ class DriverBuilder(private val processBuilderFactory: XcodeBuildProcessBuilderF
             }
 
             // Create derived data path
-            val derivedDataPath = buildDir.resolve(config.derivedDataPath)
+            val derivedDataPath = buildDir.resolve(config.platform.derivedDataPath)
             Files.createDirectories(derivedDataPath)
 
             // Build command
@@ -68,7 +68,7 @@ class DriverBuilder(private val processBuilderFactory: XcodeBuildProcessBuilderF
                     "clean",
                     "build-for-testing",
                     "-project", "${xcodebuildOutput.pathString}/maestro-driver-ios.xcodeproj",
-                    "-scheme", "maestro-driver-ios",
+                    "-scheme", config.platform.scheme,
                     "-destination", config.destination,
                     "-allowProvisioningUpdates",
                     "-derivedDataPath", derivedDataPath.toString(),

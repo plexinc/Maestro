@@ -4,15 +4,21 @@ import maestro.MaestroException
 import maestro.cli.api.CliVersion
 import maestro.cli.util.EnvUtils
 import maestro.cli.util.PrintUtils.message
+import util.ApplePlatform
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Properties
 
-class RealIOSDeviceDriver(private val teamId: String?, private val destination: String, private val driverBuilder: DriverBuilder) {
+class RealIOSDeviceDriver(
+    private val teamId: String?,
+    private val destination: String,
+    private val driverBuilder: DriverBuilder,
+    private val platform: ApplePlatform = ApplePlatform.IOS,
+) {
 
     fun validateAndUpdateDriver(driverRootDirectory: Path = getDefaultVersionPropertiesFile(), force: Boolean = false) {
-        val driverDirectory = driverRootDirectory.resolve("maestro-iphoneos-driver-build")
+        val driverDirectory = driverRootDirectory.resolve(platform.buildDirectory)
         val versionPropertiesFile = driverDirectory.resolve("version.properties")
 
         val currentCliVersion = EnvUtils.CLI_VERSION ?: throw IllegalStateException("CLI version is unavailable.")
@@ -29,7 +35,7 @@ class RealIOSDeviceDriver(private val teamId: String?, private val destination: 
             val localVersion = properties.getProperty("version")?.let { CliVersion.parse(it) }
                 ?: throw IllegalStateException("Invalid or missing version in version.properties.")
 
-            val products = driverDirectory.resolve("driver-iphoneos").resolve("Build").resolve("Products")
+            val products = platform.productsDirectory(driverRootDirectory)
             val xctestRun = products.toFile().walk().find { it.extension == "xctestrun" }
             if (currentCliVersion > localVersion) {
                 message("Local version $localVersion of iOS driver is outdated. Updating to latest.")
@@ -52,7 +58,7 @@ class RealIOSDeviceDriver(private val teamId: String?, private val destination: 
             requireNotNull(teamId) { "Apple account team ID must be specified." }
         } catch (e: IllegalArgumentException) {
             throw MaestroException.MissingAppleTeamId(
-                "Apple account team ID must be specified to build drivers for connected iPhone."
+                "Apple account team ID must be specified to build drivers for a connected device."
             )
         }
 
@@ -65,10 +71,10 @@ class RealIOSDeviceDriver(private val teamId: String?, private val destination: 
         driverBuilder.buildDriver(
             DriverBuildConfig(
                 teamId = teamId,
-                derivedDataPath = "driver-iphoneos",
                 destination = destination,
                 sourceCodePath = "driver/ios",
-                cliVersion = EnvUtils.CLI_VERSION
+                cliVersion = EnvUtils.CLI_VERSION,
+                platform = platform,
             )
         )
 

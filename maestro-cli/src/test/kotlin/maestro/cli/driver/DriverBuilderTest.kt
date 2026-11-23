@@ -7,6 +7,7 @@ import io.mockk.slot
 import org.junit.jupiter.api.Assertions.*
 import io.mockk.spyk
 import maestro.cli.api.CliVersion
+import util.ApplePlatform
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -14,6 +15,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
+import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.pathString
 import kotlin.io.path.readText
@@ -50,7 +52,6 @@ class DriverBuilderTest {
         val buildProducts = builder.buildDriver(
             DriverBuildConfig(
                 teamId = "25CQD4CKK3",
-                derivedDataPath = "driver-iphoneos",
                 sourceCodePath = "driver/ios",
                 sourceCodeRoot = System.getenv("GITHUB_WORKSPACE") ?: System.getProperty("user.home"),
                 cliVersion = CliVersion(1, 40, 0)
@@ -81,10 +82,10 @@ class DriverBuilderTest {
 
         every { driverBuildConfig.sourceCodePath } returns  "mock/source"
         every { driverBuildConfig.sourceCodeRoot } returns sourceCodeRoot
-        every { driverBuildConfig.derivedDataPath } returns  "mock/source"
         every { driverBuildConfig.teamId } returns "mock-team-id"
         every { driverBuildConfig.architectures } returns "arm64"
         every { driverBuildConfig.destination } returns "generic/platform=ios"
+        every { driverBuildConfig.platform } returns ApplePlatform.IOS
         every { driverBuildConfig.cliVersion } returns CliVersion.parse("1.40.0")
         every { driverBuilder.getDriverSourceFromResources(any()) } returns tempDir
         every { mockProcess.exitValue() } returns 1
@@ -112,5 +113,32 @@ class DriverBuilderTest {
         assertTrue(errorLog.readText().contains("xcodebuild failed!"), "Log should contain build failure message.")
 
         Paths.get(System.getenv("GITHUB_WORKSPACE") ?: System.getProperty("user.home"), "maestro-iphoneos-driver-build").toFile().deleteRecursively()
+    }
+
+    @Test
+    fun `builds the tvOS scheme into the Apple TV driver directory`() {
+        // given
+        val processBuilderFactory = mockk<XcodeBuildProcessBuilderFactory>()
+        val driverBuilder = spyk(DriverBuilder(processBuilderFactory))
+        val process = mockk<Process>(relaxed = true)
+        val commands = slot<List<String>>()
+        every { driverBuilder.getDriverSourceFromResources(any()) } returns tempDir.resolve("source").createDirectories()
+        every { process.exitValue() } returns 0
+        every { processBuilderFactory.createProcess(capture(commands), any(), any()) } returns process
+
+        // when
+        val products = driverBuilder.buildDriver(
+            DriverBuildConfig(
+                teamId = "25CQD4CKK3",
+                sourceCodeRoot = tempDir.pathString,
+                destination = ApplePlatform.TVOS.destination("apple-tv"),
+                cliVersion = CliVersion(1, 40, 0),
+                platform = ApplePlatform.TVOS,
+            )
+        )
+
+        // then
+        assertThat(commands.captured).containsAtLeast("-scheme", "maestro-driver-tvos").inOrder()
+        assertThat(products).isEqualTo(tempDir.resolve(".maestro/maestro-appletvos-driver-build/driver-appletvos/Build/Products"))
     }
 }

@@ -2,7 +2,9 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Test
+import util.ApplePlatform
 import util.DeviceCtlProcess
+import util.DeviceCtlResponse
 import util.LocalIOSDevice
 import java.nio.file.Files
 import kotlin.io.path.writeText
@@ -25,6 +27,30 @@ class DeviceCtlResponseTest {
 
         // then
         assertThat(connectedDevices).isNotEmpty()
+    }
+
+    @Test
+    fun `an Apple TV's driver listens on the device's CoreDevice tunnel address`() {
+        val appleTV = connectedDevices().single { it.platform == ApplePlatform.TVOS }
+
+        assertThat(appleTV.driverAddress()).isEqualTo("fd5a:76a0:eeec::1")
+    }
+
+    @Test
+    fun `an iPhone's driver stays on loopback, even with a tunnel address`() {
+        val iPhone = connectedDevices().single { it.hardwareProperties?.udid == "00008120-0014485601E3C01E" }
+
+        assertThat(iPhone.connectionProperties.tunnelIPAddress).isNotNull()
+        assertThat(iPhone.driverAddress()).isNull()
+    }
+
+    private fun connectedDevices(): List<DeviceCtlResponse.Device> {
+        val deviceOutput = Files.createTempFile("output", ".json").apply {
+            writeText(getDeviceCtlOutput())
+        }
+        val deviceCtlProcess = mockk<DeviceCtlProcess>()
+        every { deviceCtlProcess.devicectlDevicesOutput() } returns deviceOutput.toFile()
+        return LocalIOSDevice(deviceCtlProcess).listDeviceViaDeviceCtl()
     }
 
     private fun getDeviceCtlOutput(): String {
@@ -389,6 +415,40 @@ class DeviceCtlResponseTest {
 
                    ],
                    "visibilityClass" : "default"
+                 },
+                 {
+                   "connectionProperties" : {
+                     "authenticationType" : "manualPairing",
+                     "isMobileDeviceOnly" : false,
+                     "pairingState" : "paired",
+                     "potentialHostnames" : [
+                       "Bedroom-1.coredevice.local",
+                       "1D7A0F5C-63B2-5E1A-9C44-2B8E0D6F7A31.coredevice.local",
+                       "00008110-000A1B2C3D4E5F60.coredevice.local"
+                     ],
+                     "transportType" : "localNetwork",
+                     "tunnelIPAddress" : "fd5a:76a0:eeec::1",
+                     "tunnelState" : "connected",
+                     "tunnelTransportProtocol" : "tcp"
+                   },
+                   "deviceProperties" : {
+                     "bootState" : "booted",
+                     "ddiServicesAvailable" : true,
+                     "developerModeStatus" : "enabled",
+                     "name" : "Bedroom",
+                     "osBuildUpdate" : "22M84",
+                     "osVersionNumber" : "18.6"
+                   },
+                   "hardwareProperties" : {
+                     "deviceType" : "appleTV",
+                     "hardwareModel" : "J255AP",
+                     "marketingName" : "Apple TV 4K (3rd generation)",
+                     "platform" : "tvOS",
+                     "productType" : "AppleTV14,1",
+                     "reality" : "physical",
+                     "udid" : "00008110-000A1B2C3D4E5F60"
+                   },
+                   "identifier" : "1D7A0F5C-63B2-5E1A-9C44-2B8E0D6F7A31"
                  }
                ]
              }

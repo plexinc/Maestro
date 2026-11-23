@@ -130,6 +130,35 @@ Code: `DeviceControlIOSDevice.launch`, `LocalIOSDevice.openLink`,
 `XCTestIOSDevice.openLink`, `OpenUrlHandler.swift`, and the `MaestroDriverLib`
 include in `maestro-cli/build.gradle.kts`.
 
+### Physical Apple TVs
+
+Flows run on a physical Apple TV paired with the Mac, through `devicectl` and
+the tvOS XCTest driver built for the device.
+
+```bash
+maestro --udid <device udid> test --apple-team-id <team id> flow.yaml
+```
+
+- A device that `devicectl` reports as tvOS is listed as a tvOS device. The CLI
+  builds the `maestro-driver-tvos` scheme for it, into
+  `~/.maestro/maestro-appletvos-driver-build`. The tvOS driver targets tvOS 17,
+  the oldest release `devicectl` supports.
+- An Apple TV is reached over the network, so the loopback forward used for
+  iPhones does not apply. The driver on a physical Apple TV listens on the
+  device's end of its CoreDevice tunnel (`tunnelIPAddress` in
+  `xcrun devicectl list devices --json-output -`), and the CLI connects to it
+  there. Only the paired Mac can reach that address, so the driver is not
+  exposed on the local network. Simulators and iPhones keep the driver on
+  loopback.
+- The commands that a physical iPhone does not support yet are not supported
+  on an Apple TV either.
+
+Code: `ApplePlatform` (everything that differs between the iOS and tvOS
+drivers: scheme, SDK, product names, simulator driver),
+`DeviceCtlResponse.Device.driverAddress`,
+`DeviceService.listAppleConnectedDevices`, `MaestroSessionManager.createIOS`,
+and `makeServer` in `XCTestHTTPServer.swift`.
+
 ### Amazon Vega / Fire TV
 
 Driver for Amazon's Vega OS (a Linux/React Native OS — **not** Android).

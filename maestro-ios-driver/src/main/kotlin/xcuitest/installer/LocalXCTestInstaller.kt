@@ -12,6 +12,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.slf4j.LoggerFactory
+import util.ApplePlatform
 import util.IOSDeviceType
 import util.LocalIOSDeviceController
 import util.LocalSimulatorUtils
@@ -27,6 +28,7 @@ import kotlin.time.Duration.Companion.seconds
 class LocalXCTestInstaller(
     private val deviceId: String,
     private val host: String = "127.0.0.1",
+    private val driverListenAddress: String? = null,
     private val deviceType: IOSDeviceType,
     private val defaultPort: Int,
     private val metricsProvider: Metrics = MetricsProvider.getInstance(),
@@ -58,6 +60,7 @@ class LocalXCTestInstaller(
         target = tempDir.toPath(),
         context = iOSDriverConfig.context,
         deviceType = deviceType,
+        platform = iOSDriverConfig.platform,
     )
     private val xcRunnerCLIUtils = XCRunnerCLIUtils(tempFileHandler)
 
@@ -129,7 +132,7 @@ class LocalXCTestInstaller(
             while (System.currentTimeMillis() - startTime < getStartupTimeout()) {
                 runCatching {
                     if (isChannelAlive()) {
-                        if (iOSDriverConfig.sourceDirectory == TVOS_SIMULATOR_SOURCE_DIRECTORY && deviceType == IOSDeviceType.SIMULATOR) {
+                        if (iOSDriverConfig.platform == ApplePlatform.TVOS && deviceType == IOSDeviceType.SIMULATOR) {
                             runCatching { pressButtonHome() }
                                 .onFailure { logger.warn("Could not navigate to tvOS home screen", it) }
                         }
@@ -168,7 +171,7 @@ class LocalXCTestInstaller(
     private fun pressButtonHome() {
         val url = HttpUrl.Builder()
             .scheme("http")
-            .host("127.0.0.1")
+            .host(host)
             .port(defaultPort)
             .addPathSegment("pressButton")
             .build()
@@ -188,7 +191,7 @@ class LocalXCTestInstaller(
         fun xctestAPIBuilder(pathSegment: String): HttpUrl.Builder {
             return HttpUrl.Builder()
                 .scheme("http")
-                .host("127.0.0.1")
+                .host(host)
                 .addPathSegment(pathSegment)
                 .port(defaultPort)
         }
@@ -234,6 +237,7 @@ class LocalXCTestInstaller(
             xcTestProcess = xcRunnerCLIUtils.runXcTestWithoutBuild(
                 deviceId = this.deviceId,
                 xcTestRunFilePath = buildProducts.xctestRunPath.absolutePath,
+                listenAddress = driverListenAddress,
                 port = defaultPort,
                 snapshotKeyHonorModalViews = iOSDriverConfig.snapshotKeyHonorModalViews,
                 logsDir = logsDir,
@@ -285,12 +289,12 @@ class LocalXCTestInstaller(
         val prebuiltRunner: Boolean,
         val sourceDirectory: String,
         val context: Context,
-        val snapshotKeyHonorModalViews: Boolean?
+        val snapshotKeyHonorModalViews: Boolean?,
+        val platform: ApplePlatform = ApplePlatform.IOS,
     )
 
     companion object {
         const val UI_TEST_RUNNER_APP_BUNDLE_ID = "dev.mobile.maestro-driver-iosUITests.xctrunner"
-        const val TVOS_SIMULATOR_SOURCE_DIRECTORY = "driver-appletvSimulator"
 
         private const val SERVER_LAUNCH_TIMEOUT_MS = 120000L
         private const val MAESTRO_DRIVER_STARTUP_TIMEOUT = "MAESTRO_DRIVER_STARTUP_TIMEOUT"
