@@ -33,7 +33,7 @@ struct XCTestHTTPServer {
     func start() async throws {
         let port = ProcessInfo.processInfo.environment["PORT"]?.toUInt16()
             ?? ProcessInfo.processInfo.environment["TEST_RUNNER_PORT"]?.toUInt16()
-        let server = HTTPServer(address: try .inet(ip4: "127.0.0.1", port: port ?? 22087), timeout: 100)
+        let server = try makeServer(port: port ?? 22087)
         
         for route in Route.allCases {
             let handler = await RouteHandlerFactory.createRouteHandler(route: route)
@@ -41,5 +41,14 @@ struct XCTestHTTPServer {
         }
         
         try await server.run()
+    }
+
+    private func makeServer(port: UInt16) throws -> HTTPServer {
+        #if os(tvOS) && !targetEnvironment(simulator)
+        if let host = ProcessInfo.processInfo.environment["HOST"] {
+            return HTTPServer(address: try .inet6(ip6: host, port: port), timeout: 100)
+        }
+        #endif
+        return HTTPServer(address: try .inet(ip4: "127.0.0.1", port: port), timeout: 100)
     }
 }

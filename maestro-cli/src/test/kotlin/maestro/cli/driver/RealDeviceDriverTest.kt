@@ -1,12 +1,15 @@
 package maestro.cli.driver
 
+import com.google.common.truth.Truth.assertThat
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import io.mockk.slot
 import io.mockk.verify
 import maestro.cli.api.CliVersion
 import maestro.cli.util.EnvUtils
+import util.ApplePlatform
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -112,6 +115,31 @@ class RealDeviceDriverTest {
 
         // Verify that the driver was built due to outdated version
         verify(exactly = 1) { driverBuilder.buildDriver(any()) } // Assert buildDriver was called
+    }
+
+    @Test
+    fun `builds the Apple TV driver even when an up to date iPhone driver exists`() {
+        mockkObject(EnvUtils)
+        every { EnvUtils.getCLIVersion() } returns CliVersion.parse("1.3.0")
+        every { EnvUtils.CLI_VERSION } returns CliVersion.parse("1.3.0")
+        val config = slot<DriverBuildConfig>()
+        val driverBuilder = mockk<DriverBuilder>()
+        every { driverBuilder.buildDriver(capture(config)) } returns tempDir.resolve("Build/Products")
+        val iPhoneDriver = tempDir.resolve("maestro-iphoneos-driver-build")
+        iPhoneDriver.resolve("driver-iphoneos/Build/Products").createDirectories()
+            .resolve("maestro-driver-ios-config.xctestrun").createFile()
+        Files.newBufferedWriter(iPhoneDriver.resolve("version.properties")).use { writer ->
+            Properties().apply { setProperty("version", "1.3.0") }.store(writer, null)
+        }
+
+        RealIOSDeviceDriver(
+            teamId = "dummy-team",
+            destination = ApplePlatform.TVOS.destination("apple-tv"),
+            driverBuilder = driverBuilder,
+            platform = ApplePlatform.TVOS,
+        ).validateAndUpdateDriver(driverRootDirectory = tempDir)
+
+        assertThat(config.captured.platform).isEqualTo(ApplePlatform.TVOS)
     }
 
     @AfterEach

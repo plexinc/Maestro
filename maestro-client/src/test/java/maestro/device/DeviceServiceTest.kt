@@ -1,8 +1,12 @@
 package maestro.device
 
 import com.google.common.truth.Truth.assertThat
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import util.DeviceCtlProcess
+import util.LocalIOSDevice
 import java.io.File
 
 internal class DeviceServiceTest {
@@ -215,6 +219,44 @@ internal class DeviceServiceTest {
 
         assertThat(result).hasSize(1)
         assertThat(result.named("Bare_AVD")).isEqualTo(AvdInfo(name = "Bare_AVD", model = "", os = ""))
+    }
+
+    @Test
+    fun `a connected physical Apple TV is listed as a tvOS device`(@TempDir dir: File) {
+        val devicectlOutput = File(dir, "devicectl.json").apply {
+            writeText(
+                """
+                {
+                  "result" : {
+                    "devices" : [
+                      {
+                        "connectionProperties" : { "transportType" : "localNetwork", "tunnelIPAddress" : "fd5a:76a0:eeec::1", "tunnelState" : "connected" },
+                        "deviceProperties" : { "name" : "Bedroom", "osVersionNumber" : "18.6" },
+                        "hardwareProperties" : { "deviceType" : "appleTV", "platform" : "tvOS", "productType" : "AppleTV14,1", "udid" : "00008110-000A1B2C3D4E5F60" },
+                        "identifier" : "1D7A0F5C-63B2-5E1A-9C44-2B8E0D6F7A31"
+                      },
+                      {
+                        "connectionProperties" : { "transportType" : "wired", "tunnelIPAddress" : "fdcd:3155:df16::1", "tunnelState" : "connected" },
+                        "deviceProperties" : { "name" : "iPhone", "osVersionNumber" : "18.4.1" },
+                        "hardwareProperties" : { "deviceType" : "iPhone", "platform" : "iOS", "productType" : "iPhone15,2", "udid" : "00008120-0014485601E3C01E" },
+                        "identifier" : "6986451F-A2FF-48DE-A70E-45E06E1F1446"
+                      }
+                    ]
+                  }
+                }
+                """.trimIndent()
+            )
+        }
+        val deviceCtlProcess = mockk<DeviceCtlProcess>()
+        every { deviceCtlProcess.devicectlDevicesOutput() } returns devicectlOutput
+
+        val (appleTV, iPhone) = DeviceService.listAppleConnectedDevices(LocalIOSDevice(deviceCtlProcess))
+
+        assertThat(appleTV.platform).isEqualTo(Platform.TVOS)
+        assertThat(appleTV.deviceSpec.platform).isEqualTo(Platform.TVOS)
+        assertThat(appleTV.deviceType).isEqualTo(Device.DeviceType.REAL)
+        assertThat(iPhone.platform).isEqualTo(Platform.IOS)
+        assertThat(iPhone.deviceSpec.platform).isEqualTo(Platform.IOS)
     }
 
 }

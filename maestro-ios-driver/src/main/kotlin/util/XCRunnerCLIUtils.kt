@@ -104,6 +104,7 @@ class XCRunnerCLIUtils(private val tempFileHandler: TempFileHandler = TempFileHa
     fun runXcTestWithoutBuild(
         deviceId: String,
         xcTestRunFilePath: String,
+        listenAddress: String?,
         port: Int,
         snapshotKeyHonorModalViews: Boolean?,
         logsDir: File,
@@ -112,6 +113,9 @@ class XCRunnerCLIUtils(private val tempFileHandler: TempFileHandler = TempFileHa
         val outputFile = xctestLogFile(logsDir, date)
         val logOutputDir = tempFileHandler.createTempDirectory("maestro_xctestrunner_xcodebuild_output").toPath()
         val params = mutableMapOf("TEST_RUNNER_PORT" to port.toString())
+        if (listenAddress != null) {
+            params["TEST_RUNNER_HOST"] = listenAddress
+        }
         if (snapshotKeyHonorModalViews != null) {
             params["TEST_RUNNER_snapshotKeyHonorModalViews"] = snapshotKeyHonorModalViews.toString()
         }
